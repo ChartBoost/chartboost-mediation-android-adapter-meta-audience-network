@@ -26,7 +26,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         /**
          * The tag used for log messages.
          */
-        private const val TAG = "[FacebookAdapter]"
+        private const val TAG = "[MetaAudienceNetworkAdapter]"
     }
 
     /**
@@ -236,7 +236,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             val adView = AdView(
                 context,
                 request.partnerPlacement,
-                getFacebookBannerAdSize(request.size)
+                getMetaBannerAdSize(request.size)
             )
 
             val bannerListener: AdListener = object : AdListener {
@@ -311,7 +311,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return suspendCoroutine { continuation ->
             val heliumListener = listeners[request.heliumPlacement]
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
-            val facebookListener: InterstitialAdListener = object : InterstitialAdListener {
+            val metaListener: InterstitialAdListener = object : InterstitialAdListener {
                 override fun onInterstitialDisplayed(ad: Ad) {
                     // NO-OP
                 }
@@ -382,7 +382,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             interstitialAd.loadAd(
                 interstitialAd.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(facebookListener).build()
+                    .withAdListener(metaListener).build()
             )
         }
     }
@@ -402,7 +402,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return suspendCoroutine { continuation ->
             val heliumListener = listeners[request.heliumPlacement]
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
-            val facebookListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
+            val metaListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
                 override fun onRewardedVideoCompleted() {
                     heliumListener?.onPartnerAdRewarded(
                         PartnerAd(
@@ -482,7 +482,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             rewardedVideoAd.loadAd(
                 rewardedVideoAd.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(facebookListener).build()
+                    .withAdListener(metaListener).build()
             )
         }
     }
@@ -645,7 +645,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @return The Meta ad size that best matches the given [Size].
      */
-    private fun getFacebookBannerAdSize(size: Size?) = when (size?.height) {
+    private fun getMetaBannerAdSize(size: Size?) = when (size?.height) {
         in 50 until 90 -> AdSize.BANNER_HEIGHT_50
         in 90 until 250 -> AdSize.BANNER_HEIGHT_90
         in 250 until DisplayMetrics().heightPixels -> AdSize.RECTANGLE_HEIGHT_250
