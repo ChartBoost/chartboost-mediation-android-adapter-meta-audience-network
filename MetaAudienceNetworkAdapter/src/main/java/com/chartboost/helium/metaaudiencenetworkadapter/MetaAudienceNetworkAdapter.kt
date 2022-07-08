@@ -183,7 +183,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         return when (partnerAd.request.format) {
-            AdFormat.BANNER -> showBannerAd(partnerAd)
+            AdFormat.BANNER -> {
+                // Banner ads do not have a separate "show" mechanism.
+                Result.success(partnerAd)
+            }
             AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
             AdFormat.REWARDED -> showRewardedAd(partnerAd)
         }
@@ -484,25 +487,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     .withBid(request.adm)
                     .withAdListener(metaListener).build()
             )
-        }
-    }
-
-    /**
-     * Attempt to show a Meta Audience Network banner ad.
-     *
-     * @param partnerAd The [PartnerAd] instance containing the ad to be shown.
-     *
-     * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
-     */
-    private fun showBannerAd(partnerAd: PartnerAd): Result<PartnerAd> {
-        return partnerAd.ad?.let {
-            CoroutineScope(Dispatchers.Main).launch {
-                (it as AdView).visibility = View.VISIBLE
-            }
-            Result.success(partnerAd)
-        } ?: run {
-            LogController.e("$TAG Failed to show Meta banner ad. Banner ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
 
