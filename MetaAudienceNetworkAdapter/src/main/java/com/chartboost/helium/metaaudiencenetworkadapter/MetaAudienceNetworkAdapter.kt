@@ -10,10 +10,7 @@ import com.chartboost.heliumsdk.utils.LogController
 import com.facebook.ads.*
 import com.facebook.ads.Ad
 import com.facebook.ads.BuildConfig.VERSION_NAME
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -28,11 +25,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
          */
         private const val TAG = "[MetaAudienceNetworkAdapter]"
     }
-
-    /**
-     * A map of Helium's listeners for the corresponding Helium placements.
-     */
-    private val listeners = mutableMapOf<String, PartnerAdListener>()
 
     /**
      * Get the Meta Audience Network SDK version.
@@ -154,21 +146,21 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         request: AdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-        // Save the listener for later use.
-        listeners[request.heliumPlacement] = partnerAdListener
-
         return when (request.format) {
             AdFormat.INTERSTITIAL -> loadInterstitialAd(
                 context,
-                request
+                request,
+                partnerAdListener
             )
             AdFormat.REWARDED -> loadRewardedAd(
                 context,
-                request
+                request,
+                partnerAdListener
             )
             AdFormat.BANNER -> loadBannerAd(
                 context,
-                request
+                request,
+                partnerAdListener
             )
         }
     }
@@ -200,8 +192,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully discarded, Result.failure(Exception) otherwise.
      */
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
-        listeners.remove(partnerAd.request.heliumPlacement)
-
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
@@ -230,19 +220,23 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
-    private suspend fun loadBannerAd(context: Context, request: AdLoadRequest): Result<PartnerAd> {
+    private suspend fun loadBannerAd(
+        context: Context,
+        request: AdLoadRequest,
+        heliumListener: PartnerAdListener
+    ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
-            val listener = listeners[request.heliumPlacement]
             val adView = AdView(
                 context,
                 request.partnerPlacement,
-                getMetaBannerAdSize(request.size)
+                getMetaBannerAdSize(request.size, context)
             )
 
-            val bannerListener: AdListener = object : AdListener {
+            val metaListener: AdListener = object : AdListener {
                 override fun onError(ad: Ad, adError: AdError) {
                     LogController.e("$TAG Failed to load Meta banner ad: ${adError.errorMessage}")
                     continuation.resume(
@@ -264,28 +258,24 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onAdClicked(ad: Ad) {
-                    listener?.onPartnerAdClicked(
+                    heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request,
                         )
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdClicked for Meta adapter."
                     )
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
-                    listener?.onPartnerAdImpression(
+                    heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request,
                         )
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdImpression for Meta adapter."
                     )
                 }
             }
@@ -294,7 +284,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             adView.loadAd(
                 adView.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(bannerListener).build()
+                    .withAdListener(metaListener).build()
             )
         }
     }
@@ -304,15 +294,16 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadInterstitialAd(
         context: Context,
-        request: AdLoadRequest
+        request: AdLoadRequest,
+        heliumListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
-            val heliumListener = listeners[request.heliumPlacement]
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
             val metaListener: InterstitialAdListener = object : InterstitialAdListener {
                 override fun onInterstitialDisplayed(ad: Ad) {
@@ -320,15 +311,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onInterstitialDismissed(ad: Ad?) {
-                    heliumListener?.onPartnerAdDismissed(
+                    heliumListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request,
                         ), null
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdDismissed for Meta adapter."
                     )
                 }
 
@@ -355,28 +344,24 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onAdClicked(ad: Ad) {
-                    heliumListener?.onPartnerAdClicked(
+                    heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdClicked for Meta adapter."
                     )
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
-                    heliumListener?.onPartnerAdImpression(
+                    heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdImpression for Meta adapter."
                     )
                 }
             }
@@ -395,53 +380,48 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadRewardedAd(
         context: Context,
-        request: AdLoadRequest
+        request: AdLoadRequest,
+        heliumListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
-            val heliumListener = listeners[request.heliumPlacement]
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
             val metaListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
                 override fun onRewardedVideoCompleted() {
-                    heliumListener?.onPartnerAdRewarded(
+                    heliumListener.onPartnerAdRewarded(
                         PartnerAd(
                             ad = rewardedVideoAd,
                             inlineView = null,
                             details = emptyMap(),
                             request = request
                         ), Reward(0, "")
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdRewarded for Meta adapter."
                     )
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
-                    heliumListener?.onPartnerAdImpression(
+                    heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdImpression for Meta adapter."
                     )
                 }
 
                 override fun onRewardedVideoClosed() {
-                    heliumListener?.onPartnerAdDismissed(
+                    heliumListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = rewardedVideoAd,
                             inlineView = null,
                             details = emptyMap(),
                             request = request
                         ), null
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdDismissed for Meta adapter."
                     )
                 }
 
@@ -468,15 +448,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onAdClicked(ad: Ad) {
-                    heliumListener?.onPartnerAdClicked(
+                    heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
                             inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
-                    ) ?: LogController.d(
-                        "$TAG Unable to fire onPartnerAdClicked for Meta adapter."
                     )
                 }
             }
@@ -626,13 +604,17 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * based on height.
      *
      * @param size The [Size] to parse for conversion.
+     * @param context The [Context] to use for conversion.
      *
      * @return The Meta ad size that best matches the given [Size].
      */
-    private fun getMetaBannerAdSize(size: Size?) = when (size?.height) {
+    private fun getMetaBannerAdSize(size: Size?, context: Context) = when (size?.height) {
         in 50 until 90 -> AdSize.BANNER_HEIGHT_50
         in 90 until 250 -> AdSize.BANNER_HEIGHT_90
-        in 250 until DisplayMetrics().heightPixels -> AdSize.RECTANGLE_HEIGHT_250
+        in 250 until convertPixelsToDp(
+            DisplayMetrics().heightPixels,
+            context
+        ).toInt() -> AdSize.RECTANGLE_HEIGHT_250
         else -> AdSize.BANNER_HEIGHT_50
     }
 
@@ -651,5 +633,17 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
             else -> HeliumErrorCode.INTERNAL
         }
+    }
+
+    /**
+     * Util method to convert a pixels value to a density-independent pixels value.
+     *
+     * @param pixels The pixels value to convert.
+     * @param context The context to use for density conversion.
+     *
+     * @return The converted density-independent pixels value as a Float.
+     */
+    private fun convertPixelsToDp(pixels: Int, context: Context): Float {
+        return pixels / (context.resources.displayMetrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)
     }
 }
