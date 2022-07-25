@@ -1,7 +1,6 @@
 package com.chartboost.helium.metaaudiencenetworkadapter
 
 import android.content.Context
-import android.text.TextUtils
 import android.util.DisplayMetrics
 import android.util.Size
 import android.view.View
@@ -40,7 +39,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * of the partner SDK, and `Adapter` is the version of the adapter.
      */
     override val adapterVersion: String
-        get() = BuildConfig.VERSION_NAME
+        get() = "3.{$VERSION_NAME}.0"
 
     /**
      * Get the partner name for internal uses.
@@ -69,7 +68,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return suspendCoroutine { continuation ->
             AudienceNetworkAds
                 .buildInitSettings(context.applicationContext)
-                .withMediationService("Helium ${BuildConfig.VERSION_NAME}")
+                .withMediationService("Helium ${BuildConfig.VERSION_NAME}") // TODO: Separate out the various VERSION_NAMEs
                 .withInitListener { result ->
                     continuation.resume(getInitResult(result))
                 }
@@ -80,25 +79,27 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     /**
      * Meta Audience Network internally handles GDPR. No action is required.
      */
-    override fun setGdprApplies(gdprApplies: Boolean) {
+    override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
         // NO-OP
     }
 
     /**
      * Meta Audience Network internally handles GDPR. No action is required.
      */
-    override fun setGdprConsentStatus(gdprConsentStatus: GdprConsentStatus) {
+    override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
         // NO-OP
     }
 
     /**
      * Notify Meta Audience Network of the CCPA compliance.
      *
+     * @param context The current [Context].
+     * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
      * @param privacyString The CCPA privacy String.
      */
-    override fun setCcpaPrivacyString(privacyString: String?) {
+    override fun setCcpaConsent(context: Context, hasGivenCcpaConsent: Boolean, privacyString: String?) {
         AdSettings.setDataProcessingOptions(
-            if (TextUtils.isEmpty(privacyString))
+            if (hasGivenCcpaConsent)
                 arrayOf()
             else
                 arrayOf("LDU"), 1, 1000
@@ -108,9 +109,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     /**
      * Notify Meta Audience Network of the COPPA subjectivity.
      *
-     * @param isSubjectToCoppa The COPPA subjectivity.
+     * @param context The current [Context].
+     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
      */
-    override fun setUserSubjectToCoppa(isSubjectToCoppa: Boolean) {
+    override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
         AdSettings.setMixedAudience(isSubjectToCoppa)
     }
 
@@ -249,7 +251,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                         Result.success(
                             PartnerAd(
                                 ad = ad,
-                                inlineView = null,
                                 details = emptyMap(),
                                 request = request,
                             )
@@ -261,7 +262,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request,
                         )
@@ -272,7 +272,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request,
                         )
@@ -314,7 +313,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request,
                         ), null
@@ -335,7 +333,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                         Result.success(
                             PartnerAd(
                                 ad = ad,
-                                inlineView = null,
                                 details = emptyMap(),
                                 request = request
                             )
@@ -347,7 +344,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
@@ -358,7 +354,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
@@ -396,7 +391,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdRewarded(
                         PartnerAd(
                             ad = rewardedVideoAd,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request
                         ), Reward(0, "")
@@ -407,7 +401,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
@@ -418,7 +411,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = rewardedVideoAd,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request
                         ), null
@@ -439,7 +431,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                         Result.success(
                             PartnerAd(
                                 ad = ad,
-                                inlineView = null,
                                 details = emptyMap(),
                                 request = request
                             )
@@ -451,7 +442,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
-                            inlineView = null,
                             details = emptyMap(),
                             request = request
                         )
