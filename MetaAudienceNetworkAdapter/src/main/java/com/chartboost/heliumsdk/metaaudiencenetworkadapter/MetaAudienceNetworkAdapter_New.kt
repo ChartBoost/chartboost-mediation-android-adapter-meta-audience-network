@@ -1,4 +1,4 @@
-package com.chartboost.helium.metaaudiencenetworkadapter
+package com.chartboost.heliumsdk.metaaudiencenetworkadapter
 
 import android.content.Context
 import android.util.DisplayMetrics
@@ -17,12 +17,12 @@ import kotlin.coroutines.suspendCoroutine
 /**
  * The Helium Meta Audience Network adapter.
  */
-class MetaAudienceNetworkAdapter : PartnerAdapter {
+class MetaAudienceNetworkAdapter_New : PartnerAdapter {
     companion object {
         /**
          * The tag used for log messages.
          */
-        private const val TAG = "[MetaAudienceNetworkAdapter]"
+        private const val TAG = "[MetaAudienceNetworkAdapter_New]"
     }
 
     /**
