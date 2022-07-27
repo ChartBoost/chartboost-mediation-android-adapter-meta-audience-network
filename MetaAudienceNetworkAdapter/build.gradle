@@ -19,6 +19,7 @@ android {
         targetSdk 32
         versionCode 1
         versionName "2.6.11.0.0"
+        buildConfigField "String", "HELIUM_META_AUDIENCE_NETWORK_ADAPTER_VERSION", "\"$versionName\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
