@@ -1,4 +1,4 @@
-package com.chartboost.heliumsdk.metaaudiencenetworkadapter
+package com.chartboost.helium.metaaudiencenetworkadapter
 
 import android.content.Context
 import android.util.DisplayMetrics
@@ -17,12 +17,12 @@ import kotlin.coroutines.suspendCoroutine
 /**
  * The Helium Meta Audience Network adapter.
  */
-class MetaAudienceNetworkAdapter_New : PartnerAdapter {
+class MetaAudienceNetworkAdapter : PartnerAdapter {
     companion object {
         /**
          * The tag used for log messages.
          */
-        private const val TAG = "[MetaAudienceNetworkAdapter_New]"
+        private val TAG = "[${this::class.java.simpleName}]"
     }
 
     /**
@@ -68,7 +68,7 @@ class MetaAudienceNetworkAdapter_New : PartnerAdapter {
         return suspendCoroutine { continuation ->
             AudienceNetworkAds
                 .buildInitSettings(context.applicationContext)
-                .withMediationService("Helium ${BuildConfig.VERSION_NAME}") // TODO: Separate out the various VERSION_NAMEs
+                .withMediationService("Helium ${"BuildConfig.VERSION_NAME"}") // TODO: Separate out the various VERSION_NAMEs
                 .withInitListener { result ->
                     continuation.resume(getInitResult(result))
                 }
@@ -97,7 +97,11 @@ class MetaAudienceNetworkAdapter_New : PartnerAdapter {
      * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
      * @param privacyString The CCPA privacy String.
      */
-    override fun setCcpaConsent(context: Context, hasGivenCcpaConsent: Boolean, privacyString: String?) {
+    override fun setCcpaConsent(
+        context: Context,
+        hasGivenCcpaConsent: Boolean,
+        privacyString: String?
+    ) {
         AdSettings.setDataProcessingOptions(
             if (hasGivenCcpaConsent)
                 arrayOf()
