@@ -22,7 +22,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         /**
          * The tag used for log messages.
          */
-        private const val TAG = "[MetaAudienceNetworkAdapter]"
+        private val TAG = "[${this::class.java.simpleName}]"
     }
 
     /**
@@ -39,7 +39,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * of the partner SDK, and `Adapter` is the version of the adapter.
      */
     override val adapterVersion: String
-        get() = "3.{$VERSION_NAME}.0"
+        get() = BuildConfig.HELIUM_META_AUDIENCE_NETWORK_ADAPTER_VERSION
 
     /**
      * Get the partner name for internal uses.
@@ -68,7 +68,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return suspendCoroutine { continuation ->
             AudienceNetworkAds
                 .buildInitSettings(context.applicationContext)
-                .withMediationService("Helium ${BuildConfig.VERSION_NAME}") // TODO: Separate out the various VERSION_NAMEs
+                .withMediationService("Helium $adapterVersion")
                 .withInitListener { result ->
                     continuation.resume(getInitResult(result))
                 }
@@ -97,7 +97,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
      * @param privacyString The CCPA privacy String.
      */
-    override fun setCcpaConsent(context: Context, hasGivenCcpaConsent: Boolean, privacyString: String?) {
+    override fun setCcpaConsent(
+        context: Context,
+        hasGivenCcpaConsent: Boolean,
+        privacyString: String?
+    ) {
         AdSettings.setDataProcessingOptions(
             if (hasGivenCcpaConsent)
                 arrayOf()
