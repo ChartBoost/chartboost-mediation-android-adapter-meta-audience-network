@@ -1,7 +1,6 @@
 package com.chartboost.helium.metaaudiencenetworkadapter
 
 import android.content.Context
-import android.util.DisplayMetrics
 import android.util.Size
 import android.view.View
 import com.chartboost.heliumsdk.domain.*
@@ -19,6 +18,37 @@ import kotlin.coroutines.suspendCoroutine
  */
 class MetaAudienceNetworkAdapter : PartnerAdapter {
     companion object {
+        /**
+         * Test mode flag that can optionally be set to true to enable test ads. It can be set at any
+         * time and it will take effect for the next ad request. Remember to set this to false in
+         * production.
+         */
+        public var testMode = false
+            set(value) {
+                field = value
+                AdSettings.setTestMode(value)
+                LogController.d(
+                    "$TAG - Meta Audience Network test mode is ${
+                        if (value) "enabled. Remember to disable it before publishing."
+                        else "disabled."
+                    }"
+                )
+            }
+
+        /**
+         * List of placement IDs that can optionally be set for initialization purposes.
+         * If this list should be set, it must be set before initializing the Helium SDK.
+         */
+        public var placementIds = listOf<String>()
+            set(value) {
+                field = value
+                LogController.d(
+                    "Meta Audience Network placement IDs " +
+                            if (value.isEmpty()) "not provided for initialization."
+                            else "provided for initialization: ${value.joinToString()}."
+                )
+            }
+
         /**
          * The tag used for log messages.
          */
@@ -72,6 +102,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 .withInitListener { result ->
                     continuation.resume(getInitResult(result))
                 }
+                .withPlacementIds(placementIds)
                 .initialize()
         }
     }
@@ -132,7 +163,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         context: Context,
         request: PreBidRequest
     ): Map<String, String> {
-        // HB-3762: Meta's getBidderToken() needs to be called on a background thread.
+        // Meta's getBidderToken() needs to be called on a background thread.
         return withContext(IO) {
             hashMapOf("buyeruid" to BidderTokenProvider.getBidderToken(context))
         }
@@ -239,7 +270,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             val adView = AdView(
                 context,
                 request.partnerPlacement,
-                getMetaBannerAdSize(request.size, context)
+                getMetaBannerAdSize(request.size)
             )
 
             val metaListener: AdListener = object : AdListener {
@@ -598,18 +629,18 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * based on height.
      *
      * @param size The [Size] to parse for conversion.
-     * @param context The [Context] to use for conversion.
      *
      * @return The Meta ad size that best matches the given [Size].
      */
-    private fun getMetaBannerAdSize(size: Size?, context: Context) = when (size?.height) {
-        in 50 until 90 -> AdSize.BANNER_HEIGHT_50
-        in 90 until 250 -> AdSize.BANNER_HEIGHT_90
-        in 250 until convertPixelsToDp(
-            DisplayMetrics().heightPixels,
-            context
-        ).toInt() -> AdSize.RECTANGLE_HEIGHT_250
-        else -> AdSize.BANNER_HEIGHT_50
+    private fun getMetaBannerAdSize(size: Size?): AdSize {
+        return size?.height?.let {
+            when {
+                it in 50 until 90 -> AdSize.BANNER_HEIGHT_50
+                it in 90 until 250 -> AdSize.BANNER_HEIGHT_90
+                it >= 250 -> AdSize.RECTANGLE_HEIGHT_250
+                else -> AdSize.BANNER_HEIGHT_50
+            }
+        } ?: AdSize.BANNER_HEIGHT_50
     }
 
     /**
@@ -627,17 +658,5 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
             else -> HeliumErrorCode.INTERNAL
         }
-    }
-
-    /**
-     * Util method to convert a pixels value to a density-independent pixels value.
-     *
-     * @param pixels The pixels value to convert.
-     * @param context The context to use for density conversion.
-     *
-     * @return The converted density-independent pixels value as a Float.
-     */
-    private fun convertPixelsToDp(pixels: Int, context: Context): Float {
-        return pixels / (context.resources.displayMetrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)
     }
 }
