@@ -42,16 +42,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         public var placementIds = listOf<String>()
             set(value) {
                 field = value
-                if (value.isNotEmpty()) {
-                    LogController.d(
-                        "$TAG - Meta Audience Network placement IDs provided for initialization: " +
-                                value.joinToString()
-                    )
-                } else {
-                    LogController.d(
-                        "$TAG - Meta Audience Network placement IDs not provided for initialization."
-                    )
-                }
+                LogController.d(
+                    "Meta Audience Network placement IDs " +
+                            if (value.isEmpty()) "not provided for initialization."
+                            else "provided for initialization: ${value.joinToString()}."
+                )
             }
 
         /**
