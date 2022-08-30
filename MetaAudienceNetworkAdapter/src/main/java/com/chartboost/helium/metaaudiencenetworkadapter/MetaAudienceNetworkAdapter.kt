@@ -28,7 +28,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 field = value
                 AdSettings.setTestMode(value)
                 LogController.d(
-                    "$TAG - Meta Audience Network test mode is ${
+                    "Meta Audience Network test mode is ${
                         if (value) "enabled. Remember to disable it before publishing."
                         else "disabled."
                     }"
@@ -48,11 +48,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                             else "provided for initialization: ${value.joinToString()}."
                 )
             }
-
-        /**
-         * The tag used for log messages.
-         */
-        private val TAG = "[${this::class.java.simpleName}]"
     }
 
     /**
@@ -245,9 +240,9 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      */
     private fun getInitResult(result: AudienceNetworkAds.InitResult): Result<Unit> {
         return if (result.isSuccess) {
-            Result.success(LogController.i("$TAG Initialization succeeded."))
+            Result.success(LogController.i("Initialization succeeded."))
         } else {
-            LogController.e("$TAG Initialization failed: ${result.message}.")
+            LogController.e("Initialization failed: ${result.message}.")
             Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
         }
     }
@@ -275,7 +270,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             val metaListener: AdListener = object : AdListener {
                 override fun onError(ad: Ad, adError: AdError) {
-                    LogController.e("$TAG Failed to load Meta banner ad: ${adError.errorMessage}")
+                    LogController.e("Failed to load Meta banner ad: ${adError.errorMessage}")
                     continuation.resume(
                         Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
                     )
@@ -356,7 +351,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onError(ad: Ad, adError: AdError) {
                     LogController.e(
-                        "$TAG Failed to load Meta interstitial ad: ${adError.errorMessage}"
+                        "Failed to load Meta interstitial ad: ${adError.errorMessage}"
                     )
                     continuation.resume(
                         Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
@@ -454,7 +449,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onError(ad: Ad, adError: AdError) {
                     LogController.e(
-                        "$TAG Failed to load Meta rewarded ad: ${adError.errorMessage}"
+                        "Failed to load Meta rewarded ad: ${adError.errorMessage}"
                     )
                     continuation.resume(
                         Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
@@ -506,11 +501,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 (ad as InterstitialAd).show()
                 Result.success(partnerAd)
             } else {
-                LogController.e("$TAG Failed to show Meta interstitial ad. Ad is not ready.")
+                LogController.e("Failed to show Meta interstitial ad. Ad is not ready.")
                 Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
             }
         } ?: run {
-            LogController.e("$TAG Failed to show Meta interstitial ad. Ad is null.")
+            LogController.e("Failed to show Meta interstitial ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -528,11 +523,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 (ad as RewardedVideoAd).show()
                 Result.success(partnerAd)
             } else {
-                LogController.e("$TAG Failed to show Meta rewarded video ad. Ad is not ready.")
+                LogController.e("Failed to show Meta rewarded video ad. Ad is not ready.")
                 Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
             }
         } ?: run {
-            LogController.e("$TAG Failed to show Meta rewarded video ad. Ad is null.")
+            LogController.e("Failed to show Meta rewarded video ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -567,11 +562,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 it.destroy()
                 Result.success(partnerAd)
             } else {
-                LogController.e("$TAG Failed to destroy Meta banner ad. Ad is not an AdView.")
+                LogController.e("Failed to destroy Meta banner ad. Ad is not an AdView.")
                 Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
             }
         } ?: run {
-            LogController.e("$TAG Failed to destroy Meta banner ad. Ad is null.")
+            LogController.e("Failed to destroy Meta banner ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -590,12 +585,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 LogController.e(
-                    "$TAG Failed to destroy Meta interstitial ad. Ad is not an InterstitialAd."
+                    "Failed to destroy Meta interstitial ad. Ad is not an InterstitialAd."
                 )
                 Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
             }
         } ?: run {
-            LogController.e("$TAG Failed to destroy Meta interstitial ad. Ad is null.")
+            LogController.e("Failed to destroy Meta interstitial ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -614,12 +609,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 LogController.e(
-                    "$TAG Failed to destroy Meta rewarded ad. Ad is not a RewardedVideoAd."
+                    "Failed to destroy Meta rewarded ad. Ad is not a RewardedVideoAd."
                 )
                 Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
             }
         } ?: run {
-            LogController.e("$TAG Failed to destroy Meta rewarded ad. Ad is null.")
+            LogController.e("Failed to destroy Meta rewarded ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
