@@ -4,11 +4,15 @@ import android.content.Context
 import android.util.Size
 import android.view.View
 import com.chartboost.heliumsdk.domain.*
-import com.chartboost.heliumsdk.utils.LogController
+import com.chartboost.heliumsdk.utils.PartnerLogController
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterFailureEvents.*
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterSuccessEvents.*
 import com.facebook.ads.*
 import com.facebook.ads.Ad
 import com.facebook.ads.BuildConfig.VERSION_NAME
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -27,7 +31,8 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             set(value) {
                 field = value
                 AdSettings.setTestMode(value)
-                LogController.d(
+                PartnerLogController.log(
+                    CUSTOM,
                     "Meta Audience Network test mode is ${
                         if (value) "enabled. Remember to disable it before publishing."
                         else "disabled."
@@ -42,13 +47,24 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         public var placementIds = listOf<String>()
             set(value) {
                 field = value
-                LogController.d(
+                PartnerLogController.log(
+                    CUSTOM,
                     "Meta Audience Network placement IDs " +
                             if (value.isEmpty()) "not provided for initialization."
                             else "provided for initialization: ${value.joinToString()}."
                 )
             }
     }
+
+    /**
+     * Lambda to be called for a successful Meta Audience Network ad show.
+     */
+    private var onShowSuccess: () -> Unit = {}
+
+    /**
+     * Lambda to be called for a failed Meta Audience Network ad show.
+     */
+    private var onShowFailure: () -> Unit = {}
 
     /**
      * Get the Meta Audience Network SDK version.
@@ -90,6 +106,8 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         context: Context,
         partnerConfiguration: PartnerConfiguration
     ): Result<Unit> {
+        PartnerLogController.log(SETUP_STARTED)
+
         return suspendCoroutine { continuation ->
             AudienceNetworkAds
                 .buildInitSettings(context.applicationContext)
@@ -158,6 +176,9 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         context: Context,
         request: PreBidRequest
     ): Map<String, String> {
+        PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
+        PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
+
         // Meta's getBidderToken() needs to be called on a background thread.
         return withContext(IO) {
             hashMapOf("buyeruid" to BidderTokenProvider.getBidderToken(context))
@@ -168,16 +189,18 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * Attempt to load a Meta Audience Network ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     override suspend fun load(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
+        PartnerLogController.log(LOAD_STARTED)
+
         return when (request.format) {
             AdFormat.INTERSTITIAL -> loadInterstitialAd(
                 context,
@@ -206,13 +229,28 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
-        return when (partnerAd.request.format) {
-            AdFormat.BANNER -> {
-                // Banner ads do not have a separate "show" mechanism.
-                Result.success(partnerAd)
+        PartnerLogController.log(SHOW_STARTED)
+
+        return suspendCancellableCoroutine { continuation ->
+            when (partnerAd.request.format) {
+                AdFormat.BANNER -> {
+                    // Banner ads do not have a separate "show" mechanism.
+                    PartnerLogController.log(SHOW_SUCCEEDED)
+                    continuation.resume(Result.success(partnerAd))
+                }
+                AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
+                AdFormat.REWARDED -> showRewardedAd(partnerAd)
             }
-            AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
-            AdFormat.REWARDED -> showRewardedAd(partnerAd)
+
+            onShowSuccess = {
+                PartnerLogController.log(SHOW_SUCCEEDED)
+                continuation.resume(Result.success(partnerAd))
+            }
+
+            onShowFailure = {
+                PartnerLogController.log(SHOW_FAILED)
+                continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL)))
+            }
         }
     }
 
@@ -224,6 +262,8 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully discarded, Result.failure(Exception) otherwise.
      */
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
+        PartnerLogController.log(INVALIDATE_STARTED)
+
         return when (partnerAd.request.format) {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
@@ -240,9 +280,9 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      */
     private fun getInitResult(result: AudienceNetworkAds.InitResult): Result<Unit> {
         return if (result.isSuccess) {
-            Result.success(LogController.i("Initialization succeeded."))
+            Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
         } else {
-            LogController.e("Initialization failed: ${result.message}.")
+            PartnerLogController.log(SETUP_FAILED, "${result.message}.")
             Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
         }
     }
@@ -251,14 +291,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * Attempt to load a Meta Audience Network banner ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadBannerAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         heliumListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
@@ -270,13 +310,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             val metaListener: AdListener = object : AdListener {
                 override fun onError(ad: Ad, adError: AdError) {
-                    LogController.e("Failed to load Meta banner ad: ${adError.errorMessage}")
+                    PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
                         Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
                     )
                 }
 
                 override fun onAdLoaded(ad: Ad) {
+                    PartnerLogController.log(LOAD_SUCCEEDED)
                     continuation.resume(
                         Result.success(
                             PartnerAd(
@@ -289,6 +330,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onAdClicked(ad: Ad) {
+                    PartnerLogController.log(DID_CLICK)
                     heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
@@ -299,6 +341,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
+                    PartnerLogController.log(DID_TRACK_IMPRESSION)
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
@@ -322,24 +365,28 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * Attempt to load a Meta Audience Network interstitial ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadInterstitialAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         heliumListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
             val metaListener: InterstitialAdListener = object : InterstitialAdListener {
                 override fun onInterstitialDisplayed(ad: Ad) {
-                    // NO-OP
+                    when {
+                        ad.isAdInvalidated -> onShowFailure()
+                        else -> onShowSuccess()
+                    }
                 }
 
                 override fun onInterstitialDismissed(ad: Ad?) {
+                    PartnerLogController.log(DID_DISMISS)
                     heliumListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = ad,
@@ -350,15 +397,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onError(ad: Ad, adError: AdError) {
-                    LogController.e(
-                        "Failed to load Meta interstitial ad: ${adError.errorMessage}"
-                    )
+                    PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
                         Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
                     )
                 }
 
                 override fun onAdLoaded(ad: Ad) {
+                    PartnerLogController.log(LOAD_SUCCEEDED)
                     continuation.resume(
                         Result.success(
                             PartnerAd(
@@ -371,6 +417,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onAdClicked(ad: Ad) {
+                    PartnerLogController.log(DID_CLICK)
                     heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
@@ -381,6 +428,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
+                    PartnerLogController.log(DID_TRACK_IMPRESSION)
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
@@ -404,20 +452,21 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * Attempt to load a Meta Audience Network rewarded video ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadRewardedAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         heliumListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
             val metaListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
                 override fun onRewardedVideoCompleted() {
+                    PartnerLogController.log(DID_REWARD)
                     heliumListener.onPartnerAdRewarded(
                         PartnerAd(
                             ad = rewardedVideoAd,
@@ -428,6 +477,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
+                    // Since the rewarded ad API does not contain a show/display callback, we will
+                    // base show successes/failures on the impression callback instead.
+                    when {
+                        ad.isAdInvalidated -> onShowFailure()
+                        else -> onShowSuccess()
+                    }
+
+                    PartnerLogController.log(DID_TRACK_IMPRESSION)
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
@@ -438,6 +495,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onRewardedVideoClosed() {
+                    PartnerLogController.log(DID_DISMISS)
                     heliumListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = rewardedVideoAd,
@@ -448,15 +506,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onError(ad: Ad, adError: AdError) {
-                    LogController.e(
-                        "Failed to load Meta rewarded ad: ${adError.errorMessage}"
-                    )
+                    PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
                         Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
                     )
                 }
 
                 override fun onAdLoaded(ad: Ad) {
+                    PartnerLogController.log(LOAD_SUCCEEDED)
                     continuation.resume(
                         Result.success(
                             PartnerAd(
@@ -469,6 +526,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onAdClicked(ad: Ad) {
+                    PartnerLogController.log(DID_CLICK)
                     heliumListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
@@ -501,11 +559,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 (ad as InterstitialAd).show()
                 Result.success(partnerAd)
             } else {
-                LogController.e("Failed to show Meta interstitial ad. Ad is not ready.")
+                PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
                 Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
             }
         } ?: run {
-            LogController.e("Failed to show Meta interstitial ad. Ad is null.")
+            PartnerLogController.log(SHOW_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -523,11 +581,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 (ad as RewardedVideoAd).show()
                 Result.success(partnerAd)
             } else {
-                LogController.e("Failed to show Meta rewarded video ad. Ad is not ready.")
+                PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
                 Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
             }
         } ?: run {
-            LogController.e("Failed to show Meta rewarded video ad. Ad is null.")
+            PartnerLogController.log(SHOW_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -560,13 +618,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             if (it is AdView) {
                 it.visibility = View.GONE
                 it.destroy()
+
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             } else {
-                LogController.e("Failed to destroy Meta banner ad. Ad is not an AdView.")
+                PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an AdView.")
                 Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
             }
         } ?: run {
-            LogController.e("Failed to destroy Meta banner ad. Ad is null.")
+            PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -582,15 +642,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return partnerAd.ad?.let {
             if (it is InterstitialAd) {
                 it.destroy()
+
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             } else {
-                LogController.e(
-                    "Failed to destroy Meta interstitial ad. Ad is not an InterstitialAd."
-                )
+                PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an InterstitialAd.")
                 Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
             }
         } ?: run {
-            LogController.e("Failed to destroy Meta interstitial ad. Ad is null.")
+            PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -606,15 +666,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return partnerAd.ad?.let {
             if (it is RewardedVideoAd) {
                 it.destroy()
+
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
                 Result.success(partnerAd)
             } else {
-                LogController.e(
-                    "Failed to destroy Meta rewarded ad. Ad is not a RewardedVideoAd."
-                )
+                PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedVideoAd.")
                 Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
             }
         } ?: run {
-            LogController.e("Failed to destroy Meta rewarded ad. Ad is null.")
+            PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
