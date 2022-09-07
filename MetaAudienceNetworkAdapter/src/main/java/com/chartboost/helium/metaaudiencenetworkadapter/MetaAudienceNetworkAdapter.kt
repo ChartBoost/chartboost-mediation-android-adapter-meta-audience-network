@@ -57,14 +57,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
-     * Lambda to be called for a successful Meta Audience Network ad show.
+     * Lambda to be called for a successful Meta Audience Network interstitial ad show.
      */
-    private var onShowSuccess: () -> Unit = {}
+    private var onInterstitialAdShowSuccess: () -> Unit = {}
 
     /**
-     * Lambda to be called for a failed Meta Audience Network ad show.
+     * Lambda to be called for a failed Meta Audience Network interstitial ad show.
      */
-    private var onShowFailure: () -> Unit = {}
+    private var onInterstitialAdShowFailure: () -> Unit = {}
 
     /**
      * Get the Meta Audience Network SDK version.
@@ -242,12 +242,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 AdFormat.REWARDED -> showRewardedAd(partnerAd)
             }
 
-            onShowSuccess = {
+            // Only suspend for interstitial show results. Meta's rewarded ad API does not provide a callback.
+            onInterstitialAdShowSuccess = {
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 continuation.resume(Result.success(partnerAd))
             }
 
-            onShowFailure = {
+            onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
                 continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL)))
             }
@@ -380,8 +381,8 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             val metaListener: InterstitialAdListener = object : InterstitialAdListener {
                 override fun onInterstitialDisplayed(ad: Ad) {
                     when {
-                        ad.isAdInvalidated -> onShowFailure()
-                        else -> onShowSuccess()
+                        ad.isAdInvalidated -> onInterstitialAdShowFailure()
+                        else -> onInterstitialAdShowSuccess()
                     }
                 }
 
@@ -477,13 +478,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
 
                 override fun onLoggingImpression(ad: Ad) {
-                    // Since the rewarded ad API does not contain a show/display callback, we will
-                    // base show successes/failures on the impression callback instead.
-                    when {
-                        ad.isAdInvalidated -> onShowFailure()
-                        else -> onShowSuccess()
-                    }
-
                     PartnerLogController.log(DID_TRACK_IMPRESSION)
                     heliumListener.onPartnerAdImpression(
                         PartnerAd(
