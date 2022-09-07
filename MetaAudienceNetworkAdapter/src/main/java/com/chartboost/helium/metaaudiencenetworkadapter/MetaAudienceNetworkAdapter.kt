@@ -239,7 +239,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     continuation.resume(Result.success(partnerAd))
                 }
                 AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
-                AdFormat.REWARDED -> showRewardedAd(partnerAd)
+                AdFormat.REWARDED -> continuation.resume(showRewardedAd(partnerAd))
             }
 
             // Only suspend for interstitial show results. Meta's rewarded ad API does not provide a callback.
@@ -573,6 +573,8 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return partnerAd.ad?.let { ad ->
             if (readyToShow(ad)) {
                 (ad as RewardedVideoAd).show()
+
+                PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
