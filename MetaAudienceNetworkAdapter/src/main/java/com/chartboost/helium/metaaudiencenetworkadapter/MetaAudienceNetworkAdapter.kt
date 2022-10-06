@@ -399,7 +399,16 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             val metaListener: InterstitialAdListener = object : InterstitialAdListener {
                 override fun onInterstitialDisplayed(ad: Ad) {
                     when {
-                        ad.isAdInvalidated -> onInterstitialAdShowFailure()
+                        ad.isAdInvalidated -> {
+                            heliumListener.onPartnerAdExpired(
+                                PartnerAd(
+                                    ad = ad,
+                                    details = emptyMap(),
+                                    request = request,
+                                )
+                            )
+                            onInterstitialAdShowFailure()
+                        }
                         else -> onInterstitialAdShowSuccess()
                     }
                 }
