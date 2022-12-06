@@ -7,6 +7,6 @@ pluginManagement {
 }
 
 rootProject.name = "MetaAudienceNetworkAdapter"
-include ':MetaAudienceNetworkAdapter'
-include ':android-helium-sdk'
-include ':Helium'
+include(":MetaAudienceNetworkAdapter")
+include(":android-helium-sdk")
+include(":Helium")
