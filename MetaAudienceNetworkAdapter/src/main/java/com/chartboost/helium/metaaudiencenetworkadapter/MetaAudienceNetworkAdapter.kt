@@ -268,7 +268,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
-                continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL)))
+                continuation.resume(Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_UNKNOWN)))
             }
         }
     }
@@ -302,7 +302,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
         } else {
             PartnerLogController.log(SETUP_FAILED, "${result.message}.")
-            Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+            Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_UNKNOWN))
         }
     }
 
@@ -331,7 +331,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
+                        Result.failure(HeliumAdException(getHeliumError(adError.errorCode)))
                     )
                 }
 
@@ -427,7 +427,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
+                        Result.failure(HeliumAdException(getHeliumError(adError.errorCode)))
                     )
                 }
 
@@ -529,7 +529,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(HeliumAdException(getHeliumErrorCode(adError.errorCode)))
+                        Result.failure(HeliumAdException(getHeliumError(adError.errorCode)))
                     )
                 }
 
@@ -581,11 +581,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+                Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_READY))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -605,11 +605,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+                Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_READY))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -646,11 +646,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an AdView.")
-                Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -670,11 +670,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an InterstitialAd.")
-                Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -694,11 +694,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedVideoAd.")
-                Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -722,19 +722,19 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
-     * Convert a given Meta Audience Network error code into a [HeliumErrorCode].
+     * Convert a given Meta Audience Network error code into a [HeliumError].
      *
      * @param error The Meta [AdError] to convert.
      *
-     * @return The corresponding [HeliumErrorCode].
+     * @return The corresponding [HeliumError].
      */
-    private fun getHeliumErrorCode(error: Int): HeliumErrorCode {
+    private fun getHeliumError(error: Int): HeliumError {
         return when (error) {
-            AdError.NO_FILL_ERROR_CODE -> HeliumErrorCode.NO_FILL
-            AdError.NETWORK_ERROR_CODE -> HeliumErrorCode.NO_CONNECTIVITY
-            AdError.SERVER_ERROR_CODE -> HeliumErrorCode.SERVER_ERROR
-            AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
-            else -> HeliumErrorCode.INTERNAL
+            AdError.NO_FILL_ERROR_CODE -> HeliumError.HE_LOAD_FAILURE_NO_FILL
+            AdError.NETWORK_ERROR_CODE -> HeliumError.HE_NO_CONNECTIVITY
+            AdError.SERVER_ERROR_CODE -> HeliumError.HE_AD_SERVER_ERROR
+            AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumError.HE_LOAD_FAILURE_TIMEOUT
+            else -> HeliumError.HE_PARTNER_ERROR
         }
     }
 }
