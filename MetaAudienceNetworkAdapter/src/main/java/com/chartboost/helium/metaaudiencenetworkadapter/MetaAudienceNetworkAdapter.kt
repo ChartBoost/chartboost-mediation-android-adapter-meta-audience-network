@@ -119,18 +119,25 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
-     * Meta Audience Network internally handles GDPR. No action is required.
+     * Notify the Meta Audience Network SDK of the GDPR applicability and consent status.
+     *
+     * @param context The current [Context].
+     * @param applies True if GDPR applies, false otherwise.
+     * @param gdprConsentStatus The user's GDPR consent status.
      */
-    override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
-        PartnerLogController.log(if (gdprApplies) GDPR_APPLICABLE else GDPR_NOT_APPLICABLE)
+    override fun setGdpr(
+        context: Context,
+        applies: Boolean?,
+        gdprConsentStatus: GdprConsentStatus
+    ) {
+        PartnerLogController.log(
+            when (applies) {
+                true -> GDPR_APPLICABLE
+                false -> GDPR_NOT_APPLICABLE
+                else -> GDPR_UNKNOWN
+            }
+        )
 
-        // NO-OP
-    }
-
-    /**
-     * Meta Audience Network internally handles GDPR. No action is required.
-     */
-    override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
         PartnerLogController.log(
             when (gdprConsentStatus) {
                 GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPR_CONSENT_UNKNOWN
@@ -139,7 +146,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             }
         )
 
-        // NO-OP
+        // NO-OP. Meta Audience Network internally handles GDPR.
     }
 
     /**
