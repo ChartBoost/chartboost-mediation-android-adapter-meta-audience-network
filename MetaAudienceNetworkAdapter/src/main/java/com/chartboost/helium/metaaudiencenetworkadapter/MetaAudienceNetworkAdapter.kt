@@ -73,9 +73,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     /**
      * Get the Meta Audience Network adapter version.
      *
-     * Note that the version string will be in the format of `Helium.Partner.Partner.Partner.Adapter`,
-     * in which `Helium` is the version of the Helium SDK, `Partner` is the major.minor.patch version
-     * of the partner SDK, and `Adapter` is the version of the adapter.
+     * You may version the adapter using any preferred convention, but it is recommended to apply the
+     * following format if the adapter will be published by Helium:
+     *
+     * Helium.Partner.Adapter
+     *
+     * "Helium" represents the Helium SDK’s major version that is compatible with this adapter. This must be 1 digit.
+     * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
+     * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
      */
     override val adapterVersion: String
         get() = BuildConfig.HELIUM_META_AUDIENCE_NETWORK_ADAPTER_VERSION
@@ -735,13 +740,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @return The corresponding [HeliumError].
      */
-    private fun getHeliumError(error: Int): HeliumError {
-        return when (error) {
-            AdError.NO_FILL_ERROR_CODE -> HeliumError.HE_LOAD_FAILURE_NO_FILL
-            AdError.NETWORK_ERROR_CODE -> HeliumError.HE_NO_CONNECTIVITY
-            AdError.SERVER_ERROR_CODE -> HeliumError.HE_AD_SERVER_ERROR
-            AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumError.HE_LOAD_FAILURE_TIMEOUT
-            else -> HeliumError.HE_PARTNER_ERROR
-        }
+    private fun getHeliumError(error: Int) = when (error) {
+        AdError.NO_FILL_ERROR_CODE -> HeliumError.HE_LOAD_FAILURE_NO_FILL
+        AdError.NETWORK_ERROR_CODE -> HeliumError.HE_NO_CONNECTIVITY
+        AdError.SERVER_ERROR_CODE -> HeliumError.HE_AD_SERVER_ERROR
+        AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumError.HE_LOAD_FAILURE_TIMEOUT
+        AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> HeliumError.HE_LOAD_FAILURE_RATE_LIMITED
+        AdError.BROKEN_MEDIA_ERROR_CODE -> HeliumError.HE_SHOW_FAILURE_MEDIA_BROKEN
+        AdError.LOAD_CALLED_WHILE_SHOWING_AD -> HeliumError.HE_LOAD_FAILURE_SHOW_IN_PROGRESS
+        else -> HeliumError.HE_PARTNER_ERROR
     }
 }
