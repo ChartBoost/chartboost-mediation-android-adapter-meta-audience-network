@@ -507,7 +507,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                             ad = rewardedVideoAd,
                             details = emptyMap(),
                             request = request
-                        ), Reward(0, "")
+                        )
                     )
                 }
 
