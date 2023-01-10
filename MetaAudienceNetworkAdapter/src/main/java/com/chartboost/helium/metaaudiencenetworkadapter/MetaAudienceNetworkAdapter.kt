@@ -207,11 +207,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         request: PreBidRequest
     ): Map<String, String> {
         PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
-        PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
 
         // Meta's getBidderToken() needs to be called on a background thread.
         return withContext(IO) {
-            hashMapOf("buyeruid" to BidderTokenProvider.getBidderToken(context))
+            val token = BidderTokenProvider.getBidderToken(context) ?: ""
+
+            PartnerLogController.log(if (token.isEmpty()) BIDDER_INFO_FETCH_FAILED else BIDDER_INFO_FETCH_SUCCEEDED)
+            hashMapOf("buyeruid" to token)
         }
     }
 
