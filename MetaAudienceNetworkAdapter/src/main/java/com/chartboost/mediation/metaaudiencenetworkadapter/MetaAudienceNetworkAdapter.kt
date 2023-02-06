@@ -5,7 +5,7 @@
  * license that can be found in the LICENSE file.
  */
 
-package com.chartboost.helium.metaaudiencenetworkadapter
+package com.chartboost.mediation.metaaudiencenetworkadapter
 
 import android.content.Context
 import android.util.Size
@@ -13,17 +13,19 @@ import android.view.View
 import com.chartboost.heliumsdk.domain.*
 import com.chartboost.heliumsdk.utils.PartnerLogController
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.mediation.metaaudiencenetworkadapter.BuildConfig.CHARTBOOST_MEDIATION_META_AUDIENCE_NETWORK_ADAPTER_VERSION
 import com.facebook.ads.*
 import com.facebook.ads.Ad
 import com.facebook.ads.BuildConfig.VERSION_NAME
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import java.util.Collections.emptyMap
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 /**
- * The Helium Meta Audience Network adapter.
+ * The Chartboost Mediation Meta Audience Network adapter.
  */
 class MetaAudienceNetworkAdapter : PartnerAdapter {
     companion object {
@@ -32,7 +34,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
          * time and it will take effect for the next ad request. Remember to set this to false in
          * production.
          */
-        public var testMode = false
+        var testMode = false
             set(value) {
                 field = value
                 AdSettings.setTestMode(value)
@@ -47,9 +49,9 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
         /**
          * List of placement IDs that can optionally be set for initialization purposes.
-         * If this list should be set, it must be set before initializing the Helium SDK.
+         * If this list should be set, it must be set before initializing the Chartboost Mediation SDK.
          */
-        public var placementIds = listOf<String>()
+        var placementIds = listOf<String>()
             set(value) {
                 field = value
                 PartnerLogController.log(
@@ -81,16 +83,16 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * Get the Meta Audience Network adapter version.
      *
      * You may version the adapter using any preferred convention, but it is recommended to apply the
-     * following format if the adapter will be published by Helium:
+     * following format if the adapter will be published by Chartboost Mediation:
      *
-     * Helium.Partner.Adapter
+     * Chartboost Mediation.Partner.Adapter
      *
-     * "Helium" represents the Helium SDK’s major version that is compatible with this adapter. This must be 1 digit.
+     * "Chartboost Mediation" represents the Chartboost Mediation SDK’s major version that is compatible with this adapter. This must be 1 digit.
      * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
      * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
      */
     override val adapterVersion: String
-        get() = BuildConfig.HELIUM_META_AUDIENCE_NETWORK_ADAPTER_VERSION
+        get() = CHARTBOOST_MEDIATION_META_AUDIENCE_NETWORK_ADAPTER_VERSION
 
     /**
      * Get the partner name for internal uses.
@@ -121,7 +123,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         return suspendCoroutine { continuation ->
             AudienceNetworkAds
                 .buildInitSettings(context.applicationContext)
-                .withMediationService("Helium $adapterVersion")
+                .withMediationService("Chartboost $adapterVersion")
                 .withInitListener { result ->
                     continuation.resume(getInitResult(result))
                 }
@@ -229,7 +231,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -289,7 +291,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
-                continuation.resume(Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_UNKNOWN)))
+                continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
             }
         }
     }
@@ -323,7 +325,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
         } else {
             PartnerLogController.log(SETUP_FAILED, "${result.message}.")
-            Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_UNKNOWN))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN))
         }
     }
 
@@ -332,14 +334,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadBannerAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        heliumListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
             val adView = AdView(
@@ -352,7 +354,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(HeliumAdException(getHeliumError(adError.errorCode)))
+                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
                     )
                 }
 
@@ -371,7 +373,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdClicked(ad: Ad) {
                     PartnerLogController.log(DID_CLICK)
-                    heliumListener.onPartnerAdClicked(
+                    partnerAdListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -382,7 +384,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onLoggingImpression(ad: Ad) {
                     PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    heliumListener.onPartnerAdImpression(
+                    partnerAdListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -406,14 +408,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadInterstitialAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        heliumListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
@@ -421,7 +423,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onInterstitialDisplayed(ad: Ad) {
                     when {
                         ad.isAdInvalidated -> {
-                            heliumListener.onPartnerAdExpired(
+                            partnerAdListener.onPartnerAdExpired(
                                 PartnerAd(
                                     ad = ad,
                                     details = emptyMap(),
@@ -436,7 +438,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onInterstitialDismissed(ad: Ad?) {
                     PartnerLogController.log(DID_DISMISS)
-                    heliumListener.onPartnerAdDismissed(
+                    partnerAdListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -448,7 +450,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(HeliumAdException(getHeliumError(adError.errorCode)))
+                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
                     )
                 }
 
@@ -467,7 +469,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdClicked(ad: Ad) {
                     PartnerLogController.log(DID_CLICK)
-                    heliumListener.onPartnerAdClicked(
+                    partnerAdListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -478,7 +480,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onLoggingImpression(ad: Ad) {
                     PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    heliumListener.onPartnerAdImpression(
+                    partnerAdListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -502,21 +504,21 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param heliumListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadRewardedAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        heliumListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
             val metaListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
                 override fun onRewardedVideoCompleted() {
                     PartnerLogController.log(DID_REWARD)
-                    heliumListener.onPartnerAdRewarded(
+                    partnerAdListener.onPartnerAdRewarded(
                         PartnerAd(
                             ad = rewardedVideoAd,
                             details = emptyMap(),
@@ -527,7 +529,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onLoggingImpression(ad: Ad) {
                     PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    heliumListener.onPartnerAdImpression(
+                    partnerAdListener.onPartnerAdImpression(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -538,7 +540,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onRewardedVideoClosed() {
                     PartnerLogController.log(DID_DISMISS)
-                    heliumListener.onPartnerAdDismissed(
+                    partnerAdListener.onPartnerAdDismissed(
                         PartnerAd(
                             ad = rewardedVideoAd,
                             details = emptyMap(),
@@ -550,7 +552,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(HeliumAdException(getHeliumError(adError.errorCode)))
+                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
                     )
                 }
 
@@ -569,7 +571,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdClicked(ad: Ad) {
                     PartnerLogController.log(DID_CLICK)
-                    heliumListener.onPartnerAdClicked(
+                    partnerAdListener.onPartnerAdClicked(
                         PartnerAd(
                             ad = ad,
                             details = emptyMap(),
@@ -602,11 +604,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_READY))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -626,11 +628,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_READY))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -667,11 +669,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an AdView.")
-                Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -691,11 +693,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an InterstitialAd.")
-                Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -715,11 +717,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedVideoAd.")
-                Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
@@ -743,20 +745,20 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
-     * Convert a given Meta Audience Network error code into a [HeliumError].
+     * Convert a given Meta Audience Network error code into a [ChartboostMediationError].
      *
      * @param error The Meta [AdError] to convert.
      *
-     * @return The corresponding [HeliumError].
+     * @return The corresponding [ChartboostMediationError].
      */
-    private fun getHeliumError(error: Int) = when (error) {
-        AdError.NO_FILL_ERROR_CODE -> HeliumError.HE_LOAD_FAILURE_NO_FILL
-        AdError.NETWORK_ERROR_CODE -> HeliumError.HE_NO_CONNECTIVITY
-        AdError.SERVER_ERROR_CODE -> HeliumError.HE_AD_SERVER_ERROR
-        AdError.INTERSTITIAL_AD_TIMEOUT -> HeliumError.HE_LOAD_FAILURE_TIMEOUT
-        AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> HeliumError.HE_LOAD_FAILURE_RATE_LIMITED
-        AdError.BROKEN_MEDIA_ERROR_CODE -> HeliumError.HE_SHOW_FAILURE_MEDIA_BROKEN
-        AdError.LOAD_CALLED_WHILE_SHOWING_AD -> HeliumError.HE_LOAD_FAILURE_SHOW_IN_PROGRESS
-        else -> HeliumError.HE_PARTNER_ERROR
+    private fun getChartboostMediationError(error: Int) = when (error) {
+        AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
+        AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.CM_NO_CONNECTIVITY
+        AdError.SERVER_ERROR_CODE -> ChartboostMediationError.CM_AD_SERVER_ERROR
+        AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
+        AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_RATE_LIMITED
+        AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.CM_SHOW_FAILURE_MEDIA_BROKEN
+        AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.CM_LOAD_FAILURE_SHOW_IN_PROGRESS
+        else -> ChartboostMediationError.CM_PARTNER_ERROR
     }
 }
