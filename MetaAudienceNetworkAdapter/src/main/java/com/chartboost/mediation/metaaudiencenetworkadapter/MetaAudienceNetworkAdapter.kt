@@ -258,7 +258,16 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 request,
                 partnerAdListener
             )
+            AdFormat.REWARDED_INTERSTITIAL -> loadRewardedInterstitialAd(
+                context,
+                request,
+                partnerAdListener
+            )
         }
+    }
+
+    private suspend fun loadRewardedInterstitialAd(context: Context, request: PartnerAdLoadRequest, partnerAdListener: PartnerAdListener): Result<PartnerAd> {
+        TODO()
     }
 
     /**
@@ -281,6 +290,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
                 AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
                 AdFormat.REWARDED -> continuation.resume(showRewardedAd(partnerAd))
+                AdFormat.REWARDED_INTERSTITIAL -> TODO()
             }
 
             // Only suspend for interstitial show results. Meta's rewarded ad API does not provide a callback.
@@ -310,6 +320,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
             AdFormat.REWARDED -> destroyRewardedAd(partnerAd)
+            AdFormat.REWARDED_INTERSTITIAL -> TODO()
         }
     }
 
