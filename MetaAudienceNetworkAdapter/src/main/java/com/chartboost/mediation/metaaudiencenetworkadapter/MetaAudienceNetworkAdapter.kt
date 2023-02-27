@@ -266,10 +266,6 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         }
     }
 
-    private suspend fun loadRewardedInterstitialAd(context: Context, request: PartnerAdLoadRequest, partnerAdListener: PartnerAdListener): Result<PartnerAd> {
-        TODO()
-    }
-
     /**
      * Attempt to show the currently loaded Meta Audience Network ad.
      *
@@ -290,7 +286,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
                 AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
                 AdFormat.REWARDED -> continuation.resume(showRewardedAd(partnerAd))
-                AdFormat.REWARDED_INTERSTITIAL -> TODO()
+                AdFormat.REWARDED_INTERSTITIAL -> showRewardedInterstitialAd(partnerAd)
             }
 
             // Only suspend for interstitial show results. Meta's rewarded ad API does not provide a callback.
@@ -301,7 +297,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
-                continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+                continuation.resume(
+                    Result.failure(
+                        ChartboostMediationAdException(
+                            ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN
+                        )
+                    )
+                )
             }
         }
     }
@@ -320,7 +322,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
             AdFormat.REWARDED -> destroyRewardedAd(partnerAd)
-            AdFormat.REWARDED_INTERSTITIAL -> TODO()
+            AdFormat.REWARDED_INTERSTITIAL -> destroyRewardedInterstitialAd(partnerAd)
         }
     }
 
@@ -365,7 +367,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    adError.errorCode
+                                )
+                            )
+                        )
                     )
                 }
 
@@ -461,7 +469,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    adError.errorCode
+                                )
+                            )
+                        )
                     )
                 }
 
@@ -563,7 +577,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    adError.errorCode
+                                )
+                            )
+                        )
                     )
                 }
 
@@ -595,6 +615,102 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             // Meta Audience Network is now bidding-only.
             rewardedVideoAd.loadAd(
                 rewardedVideoAd.buildLoadAdConfig()
+                    .withBid(request.adm)
+                    .withAdListener(metaListener).build()
+            )
+        }
+    }
+
+    /**
+     * Attempt to load a Meta Audience Network rewarded interstitial ad.
+     *
+     * @param context The current [Context].
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
+     */
+    private suspend fun loadRewardedInterstitialAd(
+        context: Context,
+        request: PartnerAdLoadRequest,
+        partnerAdListener: PartnerAdListener
+    ): Result<PartnerAd> {
+        return suspendCoroutine { continuation ->
+            val rewardedInterstitialAd = RewardedInterstitialAd(context, "542539123950607_739093097628541") // TODO: Replace with request.partnerPlacement
+            val metaListener = object : RewardedInterstitialAdListener {
+                override fun onError(ad: Ad?, error: AdError) {
+                    PartnerLogController.log(LOAD_FAILED, error.errorMessage)
+                    continuation.resume(
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    error.errorCode
+                                )
+                            )
+                        )
+                    )
+                }
+
+                override fun onAdLoaded(ad: Ad?) {
+                    PartnerLogController.log(LOAD_SUCCEEDED)
+                    continuation.resume(
+                        Result.success(
+                            PartnerAd(
+                                ad = ad,
+                                details = emptyMap(),
+                                request = request
+                            )
+                        )
+                    )
+                }
+
+                override fun onAdClicked(ad: Ad?) {
+                    PartnerLogController.log(DID_CLICK)
+                    partnerAdListener.onPartnerAdClicked(
+                        PartnerAd(
+                            ad = ad,
+                            details = emptyMap(),
+                            request = request
+                        )
+                    )
+                }
+
+                override fun onLoggingImpression(ad: Ad?) {
+                    PartnerLogController.log(DID_TRACK_IMPRESSION)
+                    partnerAdListener.onPartnerAdImpression(
+                        PartnerAd(
+                            ad = ad,
+                            details = emptyMap(),
+                            request = request
+                        )
+                    )
+                }
+
+                override fun onRewardedInterstitialCompleted() {
+                    PartnerLogController.log(DID_REWARD)
+                    partnerAdListener.onPartnerAdRewarded(
+                        PartnerAd(
+                            ad = rewardedInterstitialAd,
+                            details = emptyMap(),
+                            request = request
+                        )
+                    )
+                }
+
+                override fun onRewardedInterstitialClosed() {
+                    PartnerLogController.log(DID_DISMISS)
+                    partnerAdListener.onPartnerAdDismissed(
+                        PartnerAd(
+                            ad = rewardedInterstitialAd,
+                            details = emptyMap(),
+                            request = request
+                        ), null
+                    )
+                }
+            }
+
+            rewardedInterstitialAd.loadAd(
+                rewardedInterstitialAd.buildLoadAdConfig()
                     .withBid(request.adm)
                     .withAdListener(metaListener).build()
             )
@@ -648,6 +764,30 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
+     * Attempt to show a Meta Audience Network rewarded interstitial ad.
+     *
+     * @param partnerAd The [PartnerAd] instance containing the rewarded interstitial ad to be shown.
+     *
+     * @return Result.success(partnerAd) if the ad was successfully shown, otherwise Result.failure(Exception).
+     */
+    private fun showRewardedInterstitialAd(partnerAd: PartnerAd): Result<PartnerAd> {
+        return partnerAd.ad?.let { ad ->
+            if (readyToShow(ad)) {
+                (ad as RewardedInterstitialAd).show()
+
+                PartnerLogController.log(SHOW_SUCCEEDED)
+                Result.success(partnerAd)
+            } else {
+                PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
+            }
+        } ?: run {
+            PartnerLogController.log(SHOW_FAILED, "Ad is null.")
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
+        }
+    }
+
+    /**
      * Determine if a Meta Audience Network ad is ready to be shown.
      *
      * @param ad The ad to be checked.
@@ -659,6 +799,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             is InterstitialAd -> ad.isAdLoaded && !ad.isAdInvalidated
             is RewardedVideoAd -> ad.isAdLoaded && !ad.isAdInvalidated
             is AdView -> !ad.isAdInvalidated
+            is RewardedInterstitialAd -> ad.isAdLoaded && !ad.isAdInvalidated
             else -> false
         }
     }
@@ -728,6 +869,30 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedVideoAd.")
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+            }
+        } ?: run {
+            PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+        }
+    }
+
+    /**
+     * Attempt to destroy the Meta Audience Network rewarded interstitial ad.
+     *
+     * @param partnerAd The [PartnerAd] instance containing the ad to be destroyed.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully destroyed, Result.failure(Exception) otherwise.
+     */
+    private fun destroyRewardedInterstitialAd(partnerAd: PartnerAd): Result<PartnerAd> {
+        return partnerAd.ad?.let {
+            if (it is RewardedInterstitialAd) {
+                it.destroy()
+
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
+                Result.success(partnerAd)
+            } else {
+                PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedInterstitialAd.")
                 Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
             }
         } ?: run {
