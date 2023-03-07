@@ -297,13 +297,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
-                continuation.resume(
-                    Result.failure(
-                        ChartboostMediationAdException(
-                            ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN
-                        )
-                    )
-                )
+                continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
             }
         }
     }
@@ -367,13 +361,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    adError.errorCode
-                                )
-                            )
-                        )
+                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
                     )
                 }
 
@@ -469,13 +457,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    adError.errorCode
-                                )
-                            )
-                        )
+                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
                     )
                 }
 
@@ -577,13 +559,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    adError.errorCode
-                                )
-                            )
-                        )
+                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
                     )
                 }
 
