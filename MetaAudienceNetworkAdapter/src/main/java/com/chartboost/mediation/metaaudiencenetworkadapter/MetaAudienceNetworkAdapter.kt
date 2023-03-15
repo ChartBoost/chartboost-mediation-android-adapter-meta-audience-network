@@ -612,7 +612,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
         return suspendCoroutine { continuation ->
-            val rewardedInterstitialAd = RewardedInterstitialAd(context, "542539123950607_739093097628541") // TODO: Replace with request.partnerPlacement
+            val rewardedInterstitialAd = RewardedInterstitialAd(context, request.partnerPlacement)
             val metaListener = object : RewardedInterstitialAdListener {
                 override fun onError(ad: Ad?, error: AdError) {
                     PartnerLogController.log(LOAD_FAILED, error.errorMessage)
