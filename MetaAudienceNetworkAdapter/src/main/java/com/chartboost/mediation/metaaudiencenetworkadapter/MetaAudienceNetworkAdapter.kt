@@ -258,6 +258,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 request,
                 partnerAdListener
             )
+            else -> {
+                PartnerLogController.log(LOAD_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+            }
         }
     }
 
@@ -278,9 +282,18 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     // Banner ads do not have a separate "show" mechanism.
                     PartnerLogController.log(SHOW_SUCCEEDED)
                     continuation.resume(Result.success(partnerAd))
+                    return@suspendCancellableCoroutine
                 }
                 AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
-                AdFormat.REWARDED -> continuation.resume(showRewardedAd(partnerAd))
+                AdFormat.REWARDED -> {
+                    continuation.resume(showRewardedAd(partnerAd))
+                    return@suspendCancellableCoroutine
+                }
+                else -> {
+                    PartnerLogController.log(SHOW_FAILED)
+                    continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT)))
+                    return@suspendCancellableCoroutine
+                }
             }
 
             // Only suspend for interstitial show results. Meta's rewarded ad API does not provide a callback.
@@ -310,6 +323,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
             AdFormat.REWARDED -> destroyRewardedAd(partnerAd)
+            else -> {
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
+                Result.success(partnerAd)
+            }
         }
     }
 
