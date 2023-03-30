@@ -258,14 +258,17 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 request,
                 partnerAdListener
             )
-            AdFormat.REWARDED_INTERSTITIAL -> loadRewardedInterstitialAd(
-                context,
-                request,
-                partnerAdListener
-            )
             else -> {
-                PartnerLogController.log(LOAD_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+                if (request.format.key == "rewarded_interstitial") {
+                    loadRewardedInterstitialAd(
+                        context,
+                        request,
+                        partnerAdListener
+                    )
+                } else {
+                    PartnerLogController.log(LOAD_FAILED)
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+                }
             }
         }
     }
@@ -287,13 +290,28 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     // Banner ads do not have a separate "show" mechanism.
                     PartnerLogController.log(SHOW_SUCCEEDED)
                     continuation.resume(Result.success(partnerAd))
+                    return@suspendCancellableCoroutine
                 }
                 AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
-                AdFormat.REWARDED -> continuation.resume(showRewardedAd(partnerAd))
-                AdFormat.REWARDED_INTERSTITIAL -> showRewardedInterstitialAd(partnerAd)
+                AdFormat.REWARDED -> {
+                    continuation.resume(showRewardedAd(partnerAd))
+                    return@suspendCancellableCoroutine
+                }
                 else -> {
-                    PartnerLogController.log(SHOW_FAILED)
-                    continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT)))
+                    if (partnerAd.request.format.key == "rewarded_interstitial") {
+                        continuation.resume(showRewardedInterstitialAd(partnerAd))
+                        return@suspendCancellableCoroutine
+                    } else {
+                        PartnerLogController.log(SHOW_FAILED)
+                        continuation.resume(
+                            Result.failure(
+                                ChartboostMediationAdException(
+                                    ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT
+                                )
+                            )
+                        )
+                        return@suspendCancellableCoroutine
+                    }
                 }
             }
 
@@ -305,7 +323,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
             onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
-                continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+                continuation.resume(
+                    Result.failure(
+                        ChartboostMediationAdException(
+                            ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN
+                        )
+                    )
+                )
             }
         }
     }
@@ -324,10 +348,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             AdFormat.BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
             AdFormat.REWARDED -> destroyRewardedAd(partnerAd)
-            AdFormat.REWARDED_INTERSTITIAL -> destroyRewardedInterstitialAd(partnerAd)
             else -> {
-                PartnerLogController.log(INVALIDATE_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_UNSUPPORTED_AD_FORMAT))
+                if (partnerAd.request.format.key == "rewarded_interstitial") {
+                    destroyRewardedInterstitialAd(partnerAd)
+                } else {
+                    PartnerLogController.log(INVALIDATE_SUCCEEDED)
+                    Result.success(partnerAd)
+                }
             }
         }
     }
@@ -373,7 +400,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    adError.errorCode
+                                )
+                            )
+                        )
                     )
                 }
 
@@ -469,7 +502,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    adError.errorCode
+                                )
+                            )
+                        )
                     )
                 }
 
@@ -571,7 +610,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
                     continuation.resume(
-                        Result.failure(ChartboostMediationAdException(getChartboostMediationError(adError.errorCode)))
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                getChartboostMediationError(
+                                    adError.errorCode
+                                )
+                            )
+                        )
                     )
                 }
 
