@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-dontwarn com.facebook.ads.internal.**
+-keeppackagenames com.facebook.*
+-keep public class com.facebook.ads.** { *; }
+-keep public class com.facebook.ads.** { public protected *; }
