@@ -3,6 +3,9 @@
 Note the first digit of every adapter version corresponds to the major version of the Chartboost Mediation SDK compatible with that adapter. 
 Adapters are compatible with any Chartboost Mediation SDK version within that major version.
 
+### 4.6.14.0.2
+- Guard against multiple continuation resumes wherever possible.
+
 ### 4.6.14.0.1
 - Added ProGuard rules.
 

@@ -13,7 +13,7 @@ The Chartboost Mediation Meta Audience Network adapter mediates Meta Audience Ne
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:chartboost-mediation-adapter-meta-audience-network:4.6.14.0.1"
+    implementation "com.chartboost:chartboost-mediation-adapter-meta-audience-network:4.6.14.0.2"
 ```
 
 ## Contributions
