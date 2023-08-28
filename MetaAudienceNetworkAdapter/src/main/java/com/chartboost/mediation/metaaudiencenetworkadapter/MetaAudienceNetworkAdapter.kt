@@ -120,12 +120,17 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<Unit> {
         PartnerLogController.log(SETUP_STARTED)
 
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
+            fun resumeOnce(result: Result<Unit>) {
+                if (continuation.isActive) {
+                    continuation.resume(result)
+                }
+            }
             AudienceNetworkAds
                 .buildInitSettings(context.applicationContext)
                 .withMediationService("Chartboost $adapterVersion")
                 .withInitListener { result ->
-                    continuation.resume(getInitResult(result))
+                    resumeOnce(getInitResult(result))
                 }
                 .withPlacementIds(placementIds)
                 .initialize()
@@ -285,25 +290,31 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         PartnerLogController.log(SHOW_STARTED)
 
         return suspendCancellableCoroutine { continuation ->
+            fun resumeOnce(result: Result<PartnerAd>) {
+                if (continuation.isActive) {
+                    continuation.resume(result)
+                }
+            }
+
             when (partnerAd.request.format) {
                 AdFormat.BANNER -> {
                     // Banner ads do not have a separate "show" mechanism.
                     PartnerLogController.log(SHOW_SUCCEEDED)
-                    continuation.resume(Result.success(partnerAd))
+                    resumeOnce(Result.success(partnerAd))
                     return@suspendCancellableCoroutine
                 }
                 AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
                 AdFormat.REWARDED -> {
-                    continuation.resume(showRewardedAd(partnerAd))
+                    resumeOnce(showRewardedAd(partnerAd))
                     return@suspendCancellableCoroutine
                 }
                 else -> {
                     if (partnerAd.request.format.key == "rewarded_interstitial") {
-                        continuation.resume(showRewardedInterstitialAd(partnerAd))
+                        resumeOnce(showRewardedInterstitialAd(partnerAd))
                         return@suspendCancellableCoroutine
                     } else {
                         PartnerLogController.log(SHOW_FAILED)
-                        continuation.resume(
+                        resumeOnce(
                             Result.failure(
                                 ChartboostMediationAdException(
                                     ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT
@@ -318,12 +329,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             // Only suspend for interstitial show results. Meta's rewarded ad API does not provide a callback.
             onInterstitialAdShowSuccess = {
                 PartnerLogController.log(SHOW_SUCCEEDED)
-                continuation.resume(Result.success(partnerAd))
+                resumeOnce(Result.success(partnerAd))
             }
 
             onInterstitialAdShowFailure = {
                 PartnerLogController.log(SHOW_FAILED)
-                continuation.resume(
+                resumeOnce(
                     Result.failure(
                         ChartboostMediationAdException(
                             ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN
@@ -389,7 +400,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
             val adView = AdView(
                 context,
                 request.partnerPlacement,
@@ -397,9 +408,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             )
 
             val metaListener: AdListener = object : AdListener {
+                fun resumeOnce(result: Result<PartnerAd>) {
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
+                }
+
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                    continuation.resume(
+                    resumeOnce(
                         Result.failure(
                             ChartboostMediationAdException(
                                 getChartboostMediationError(
@@ -412,7 +429,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdLoaded(ad: Ad) {
                     PartnerLogController.log(LOAD_SUCCEEDED)
-                    continuation.resume(
+                    resumeOnce(
                         Result.success(
                             PartnerAd(
                                 ad = ad,
@@ -469,9 +486,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
             val metaListener: InterstitialAdListener = object : InterstitialAdListener {
+                fun resumeOnce(result: Result<PartnerAd>) {
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
+                }
+
                 override fun onInterstitialDisplayed(ad: Ad) {
                     when {
                         ad.isAdInvalidated -> {
@@ -501,7 +524,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                    continuation.resume(
+                    resumeOnce(
                         Result.failure(
                             ChartboostMediationAdException(
                                 getChartboostMediationError(
@@ -514,7 +537,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdLoaded(ad: Ad) {
                     PartnerLogController.log(LOAD_SUCCEEDED)
-                    continuation.resume(
+                    resumeOnce(
                         Result.success(
                             PartnerAd(
                                 ad = ad,
@@ -571,9 +594,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
             val metaListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
+                fun resumeOnce(result: Result<PartnerAd>) {
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
+                }
+
                 override fun onRewardedVideoCompleted() {
                     PartnerLogController.log(DID_REWARD)
                     partnerAdListener.onPartnerAdRewarded(
@@ -609,7 +638,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onError(ad: Ad, adError: AdError) {
                     PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                    continuation.resume(
+                    resumeOnce(
                         Result.failure(
                             ChartboostMediationAdException(
                                 getChartboostMediationError(
@@ -622,7 +651,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdLoaded(ad: Ad) {
                     PartnerLogController.log(LOAD_SUCCEEDED)
-                    continuation.resume(
+                    resumeOnce(
                         Result.success(
                             PartnerAd(
                                 ad = ad,
@@ -668,12 +697,18 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
             val rewardedInterstitialAd = RewardedInterstitialAd(context, request.partnerPlacement)
             val metaListener = object : RewardedInterstitialAdListener {
+                fun resumeOnce(result: Result<PartnerAd>) {
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
+                }
+
                 override fun onError(ad: Ad?, error: AdError) {
                     PartnerLogController.log(LOAD_FAILED, error.errorMessage)
-                    continuation.resume(
+                    resumeOnce(
                         Result.failure(
                             ChartboostMediationAdException(
                                 getChartboostMediationError(
@@ -686,7 +721,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
 
                 override fun onAdLoaded(ad: Ad?) {
                     PartnerLogController.log(LOAD_SUCCEEDED)
-                    continuation.resume(
+                    resumeOnce(
                         Result.success(
                             PartnerAd(
                                 ad = ad,

@@ -5,6 +5,7 @@ Adapters are compatible with any Chartboost Mediation SDK version within that ma
 
 ### 4.6.15.0.0
 - This version of the adapter has been certified with Meta Audience Network SDK 6.15.0.
+- Guard against multiple continuation resumes wherever possible.
 
 ### 4.6.14.0.1
 - Added ProGuard rules.
