@@ -247,18 +247,18 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format) {
-            AdFormat.INTERSTITIAL -> loadInterstitialAd(
+        return when (request.format.key) {
+            AdFormat.INTERSTITIAL.key -> loadInterstitialAd(
                 context,
                 request,
                 partnerAdListener
             )
-            AdFormat.REWARDED -> loadRewardedAd(
+            AdFormat.REWARDED.key -> loadRewardedAd(
                 context,
                 request,
                 partnerAdListener
             )
-            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> loadBannerAd(
+            AdFormat.BANNER.key, "adaptive_banner" -> loadBannerAd(
                 context,
                 request,
                 partnerAdListener
@@ -296,15 +296,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
             }
 
-            when (partnerAd.request.format) {
-                AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
+            when (partnerAd.request.format.key) {
+                AdFormat.BANNER.key, "adaptive_banner" -> {
                     // Banner ads do not have a separate "show" mechanism.
                     PartnerLogController.log(SHOW_SUCCEEDED)
                     resumeOnce(Result.success(partnerAd))
                     return@suspendCancellableCoroutine
                 }
-                AdFormat.INTERSTITIAL -> showInterstitialAd(partnerAd)
-                AdFormat.REWARDED -> {
+                AdFormat.INTERSTITIAL.key -> showInterstitialAd(partnerAd)
+                AdFormat.REWARDED.key -> {
                     resumeOnce(showRewardedAd(partnerAd))
                     return@suspendCancellableCoroutine
                 }
@@ -355,10 +355,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(INVALIDATE_STARTED)
 
-        return when (partnerAd.request.format) {
-            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> destroyBannerAd(partnerAd)
-            AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
-            AdFormat.REWARDED -> destroyRewardedAd(partnerAd)
+        return when (partnerAd.request.format.key) {
+            AdFormat.BANNER.key, "adaptive_banner" -> destroyBannerAd(partnerAd)
+            AdFormat.INTERSTITIAL.key -> destroyInterstitialAd(partnerAd)
+            AdFormat.REWARDED.key -> destroyRewardedAd(partnerAd)
             else -> {
                 if (partnerAd.request.format.key == "rewarded_interstitial") {
                     destroyRewardedInterstitialAd(partnerAd)
