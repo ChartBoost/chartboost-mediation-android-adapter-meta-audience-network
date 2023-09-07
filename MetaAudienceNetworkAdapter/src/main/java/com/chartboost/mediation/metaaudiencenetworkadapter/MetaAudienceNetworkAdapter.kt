@@ -258,7 +258,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 request,
                 partnerAdListener
             )
-            AdFormat.BANNER -> loadBannerAd(
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> loadBannerAd(
                 context,
                 request,
                 partnerAdListener
@@ -297,7 +297,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             }
 
             when (partnerAd.request.format) {
-                AdFormat.BANNER -> {
+                AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
                     // Banner ads do not have a separate "show" mechanism.
                     PartnerLogController.log(SHOW_SUCCEEDED)
                     resumeOnce(Result.success(partnerAd))
@@ -356,7 +356,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         PartnerLogController.log(INVALIDATE_STARTED)
 
         return when (partnerAd.request.format) {
-            AdFormat.BANNER -> destroyBannerAd(partnerAd)
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> destroyBannerAd(partnerAd)
             AdFormat.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
             AdFormat.REWARDED -> destroyRewardedAd(partnerAd)
             else -> {
