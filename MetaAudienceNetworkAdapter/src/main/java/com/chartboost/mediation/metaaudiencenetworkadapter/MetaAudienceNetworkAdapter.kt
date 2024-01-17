@@ -1,6 +1,6 @@
 /*
  * Copyright 2022-2023 Chartboost, Inc.
- * 
+ *
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file.
  */
@@ -22,7 +22,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.util.Collections.emptyMap
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * The Chartboost Mediation Meta Audience Network adapter.
@@ -41,9 +40,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 PartnerLogController.log(
                     CUSTOM,
                     "Meta Audience Network test mode is ${
-                        if (value) "enabled. Remember to disable it before publishing."
-                        else "disabled."
-                    }"
+                        if (value) {
+                            "enabled. Remember to disable it before publishing."
+                        } else {
+                            "disabled."
+                        }
+                    }",
                 )
             }
 
@@ -57,8 +59,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 PartnerLogController.log(
                     CUSTOM,
                     "Meta Audience Network placement IDs " +
-                            if (value.isEmpty()) "not provided for initialization."
-                            else "provided for initialization: ${value.joinToString()}."
+                        if (value.isEmpty()) {
+                            "not provided for initialization."
+                        } else {
+                            "provided for initialization: ${value.joinToString()}."
+                        },
                 )
             }
     }
@@ -116,7 +121,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      */
     override suspend fun setUp(
         context: Context,
-        partnerConfiguration: PartnerConfiguration
+        partnerConfiguration: PartnerConfiguration,
     ): Result<Unit> {
         PartnerLogController.log(SETUP_STARTED)
 
@@ -147,14 +152,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override fun setGdpr(
         context: Context,
         applies: Boolean?,
-        gdprConsentStatus: GdprConsentStatus
+        gdprConsentStatus: GdprConsentStatus,
     ) {
         PartnerLogController.log(
             when (applies) {
                 true -> GDPR_APPLICABLE
                 false -> GDPR_NOT_APPLICABLE
                 else -> GDPR_UNKNOWN
-            }
+            },
         )
 
         PartnerLogController.log(
@@ -162,7 +167,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPR_CONSENT_UNKNOWN
                 GdprConsentStatus.GDPR_CONSENT_GRANTED -> GDPR_CONSENT_GRANTED
                 GdprConsentStatus.GDPR_CONSENT_DENIED -> GDPR_CONSENT_DENIED
-            }
+            },
         )
 
         // NO-OP. Meta Audience Network internally handles GDPR.
@@ -178,18 +183,24 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override fun setCcpaConsent(
         context: Context,
         hasGrantedCcpaConsent: Boolean,
-        privacyString: String
+        privacyString: String,
     ) {
         PartnerLogController.log(
-            if (hasGrantedCcpaConsent) CCPA_CONSENT_GRANTED
-            else CCPA_CONSENT_DENIED
+            if (hasGrantedCcpaConsent) {
+                CCPA_CONSENT_GRANTED
+            } else {
+                CCPA_CONSENT_DENIED
+            },
         )
 
         AdSettings.setDataProcessingOptions(
-            if (hasGrantedCcpaConsent)
+            if (hasGrantedCcpaConsent) {
                 arrayOf()
-            else
-                arrayOf("LDU"), 1, 1000
+            } else {
+                arrayOf("LDU")
+            },
+            1,
+            1000,
         )
     }
 
@@ -199,10 +210,16 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @param context The current [Context].
      * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
      */
-    override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
+    override fun setUserSubjectToCoppa(
+        context: Context,
+        isSubjectToCoppa: Boolean,
+    ) {
         PartnerLogController.log(
-            if (isSubjectToCoppa) COPPA_SUBJECT
-            else COPPA_NOT_SUBJECT
+            if (isSubjectToCoppa) {
+                COPPA_SUBJECT
+            } else {
+                COPPA_NOT_SUBJECT
+            },
         )
 
         AdSettings.setMixedAudience(isSubjectToCoppa)
@@ -218,7 +235,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      */
     override suspend fun fetchBidderInformation(
         context: Context,
-        request: PreBidRequest
+        request: PreBidRequest,
     ): Map<String, String> {
         PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
 
@@ -243,32 +260,35 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override suspend fun load(
         context: Context,
         request: PartnerAdLoadRequest,
-        partnerAdListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener,
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
         return when (request.format.key) {
-            AdFormat.INTERSTITIAL.key -> loadInterstitialAd(
-                context,
-                request,
-                partnerAdListener
-            )
-            AdFormat.REWARDED.key -> loadRewardedAd(
-                context,
-                request,
-                partnerAdListener
-            )
-            AdFormat.BANNER.key, "adaptive_banner" -> loadBannerAd(
-                context,
-                request,
-                partnerAdListener
-            )
+            AdFormat.INTERSTITIAL.key ->
+                loadInterstitialAd(
+                    context,
+                    request,
+                    partnerAdListener,
+                )
+            AdFormat.REWARDED.key ->
+                loadRewardedAd(
+                    context,
+                    request,
+                    partnerAdListener,
+                )
+            AdFormat.BANNER.key, "adaptive_banner" ->
+                loadBannerAd(
+                    context,
+                    request,
+                    partnerAdListener,
+                )
             else -> {
                 if (request.format.key == "rewarded_interstitial") {
                     loadRewardedInterstitialAd(
                         context,
                         request,
-                        partnerAdListener
+                        partnerAdListener,
                     )
                 } else {
                     PartnerLogController.log(LOAD_FAILED)
@@ -286,7 +306,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
-    override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
+    override suspend fun show(
+        context: Context,
+        partnerAd: PartnerAd,
+    ): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
 
         return suspendCancellableCoroutine { continuation ->
@@ -317,9 +340,9 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                         resumeOnce(
                             Result.failure(
                                 ChartboostMediationAdException(
-                                    ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT
-                                )
-                            )
+                                    ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT,
+                                ),
+                            ),
                         )
                         return@suspendCancellableCoroutine
                     }
@@ -337,9 +360,9 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 resumeOnce(
                     Result.failure(
                         ChartboostMediationAdException(
-                            ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN
-                        )
-                    )
+                            ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN,
+                        ),
+                    ),
                 )
             }
         }
@@ -398,76 +421,81 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     private suspend fun loadBannerAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        partnerAdListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener,
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
-            val adView = AdView(
-                context,
-                request.partnerPlacement,
-                getMetaBannerAdSize(request.size)
-            )
+            val adView =
+                AdView(
+                    context,
+                    request.partnerPlacement,
+                    getMetaBannerAdSize(request.size),
+                )
 
-            val metaListener: AdListener = object : AdListener {
-                fun resumeOnce(result: Result<PartnerAd>) {
-                    if (continuation.isActive) {
-                        continuation.resume(result)
+            val metaListener: AdListener =
+                object : AdListener {
+                    fun resumeOnce(result: Result<PartnerAd>) {
+                        if (continuation.isActive) {
+                            continuation.resume(result)
+                        }
                     }
-                }
 
-                override fun onError(ad: Ad, adError: AdError) {
-                    PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                    resumeOnce(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    adError.errorCode
-                                )
-                            )
+                    override fun onError(
+                        ad: Ad,
+                        adError: AdError,
+                    ) {
+                        PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
+                        resumeOnce(
+                            Result.failure(
+                                ChartboostMediationAdException(
+                                    getChartboostMediationError(
+                                        adError.errorCode,
+                                    ),
+                                ),
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdLoaded(ad: Ad) {
-                    PartnerLogController.log(LOAD_SUCCEEDED)
-                    resumeOnce(
-                        Result.success(
+                    override fun onAdLoaded(ad: Ad) {
+                        PartnerLogController.log(LOAD_SUCCEEDED)
+                        resumeOnce(
+                            Result.success(
+                                PartnerAd(
+                                    ad = ad,
+                                    details = emptyMap(),
+                                    request = request,
+                                ),
+                            ),
+                        )
+                    }
+
+                    override fun onAdClicked(ad: Ad) {
+                        PartnerLogController.log(DID_CLICK)
+                        partnerAdListener.onPartnerAdClicked(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
                                 request = request,
-                            )
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdClicked(ad: Ad) {
-                    PartnerLogController.log(DID_CLICK)
-                    partnerAdListener.onPartnerAdClicked(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request,
+                    override fun onLoggingImpression(ad: Ad) {
+                        PartnerLogController.log(DID_TRACK_IMPRESSION)
+                        partnerAdListener.onPartnerAdImpression(
+                            PartnerAd(
+                                ad = ad,
+                                details = emptyMap(),
+                                request = request,
+                            ),
                         )
-                    )
+                    }
                 }
-
-                override fun onLoggingImpression(ad: Ad) {
-                    PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    partnerAdListener.onPartnerAdImpression(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request,
-                        )
-                    )
-                }
-            }
 
             // Meta Audience Network is now bidding-only.
             adView.loadAd(
                 adView.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(metaListener).build()
+                    .withAdListener(metaListener).build(),
             )
         }
     }
@@ -484,98 +512,103 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     private suspend fun loadInterstitialAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        partnerAdListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener,
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
-            val metaListener: InterstitialAdListener = object : InterstitialAdListener {
-                fun resumeOnce(result: Result<PartnerAd>) {
-                    if (continuation.isActive) {
-                        continuation.resume(result)
+            val metaListener: InterstitialAdListener =
+                object : InterstitialAdListener {
+                    fun resumeOnce(result: Result<PartnerAd>) {
+                        if (continuation.isActive) {
+                            continuation.resume(result)
+                        }
                     }
-                }
 
-                override fun onInterstitialDisplayed(ad: Ad) {
-                    when {
-                        ad.isAdInvalidated -> {
-                            partnerAdListener.onPartnerAdExpired(
+                    override fun onInterstitialDisplayed(ad: Ad) {
+                        when {
+                            ad.isAdInvalidated -> {
+                                partnerAdListener.onPartnerAdExpired(
+                                    PartnerAd(
+                                        ad = ad,
+                                        details = emptyMap(),
+                                        request = request,
+                                    ),
+                                )
+                                onInterstitialAdShowFailure()
+                            }
+                            else -> onInterstitialAdShowSuccess()
+                        }
+                    }
+
+                    override fun onInterstitialDismissed(ad: Ad?) {
+                        PartnerLogController.log(DID_DISMISS)
+                        partnerAdListener.onPartnerAdDismissed(
+                            PartnerAd(
+                                ad = ad,
+                                details = emptyMap(),
+                                request = request,
+                            ),
+                            null,
+                        )
+                    }
+
+                    override fun onError(
+                        ad: Ad,
+                        adError: AdError,
+                    ) {
+                        PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
+                        resumeOnce(
+                            Result.failure(
+                                ChartboostMediationAdException(
+                                    getChartboostMediationError(
+                                        adError.errorCode,
+                                    ),
+                                ),
+                            ),
+                        )
+                    }
+
+                    override fun onAdLoaded(ad: Ad) {
+                        PartnerLogController.log(LOAD_SUCCEEDED)
+                        resumeOnce(
+                            Result.success(
                                 PartnerAd(
                                     ad = ad,
                                     details = emptyMap(),
                                     request = request,
-                                )
-                            )
-                            onInterstitialAdShowFailure()
-                        }
-                        else -> onInterstitialAdShowSuccess()
-                    }
-                }
-
-                override fun onInterstitialDismissed(ad: Ad?) {
-                    PartnerLogController.log(DID_DISMISS)
-                    partnerAdListener.onPartnerAdDismissed(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request,
-                        ), null
-                    )
-                }
-
-                override fun onError(ad: Ad, adError: AdError) {
-                    PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                    resumeOnce(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    adError.errorCode
-                                )
-                            )
+                                ),
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdLoaded(ad: Ad) {
-                    PartnerLogController.log(LOAD_SUCCEEDED)
-                    resumeOnce(
-                        Result.success(
+                    override fun onAdClicked(ad: Ad) {
+                        PartnerLogController.log(DID_CLICK)
+                        partnerAdListener.onPartnerAdClicked(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
-                                request = request
-                            )
+                                request = request,
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdClicked(ad: Ad) {
-                    PartnerLogController.log(DID_CLICK)
-                    partnerAdListener.onPartnerAdClicked(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request
+                    override fun onLoggingImpression(ad: Ad) {
+                        PartnerLogController.log(DID_TRACK_IMPRESSION)
+                        partnerAdListener.onPartnerAdImpression(
+                            PartnerAd(
+                                ad = ad,
+                                details = emptyMap(),
+                                request = request,
+                            ),
                         )
-                    )
+                    }
                 }
-
-                override fun onLoggingImpression(ad: Ad) {
-                    PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    partnerAdListener.onPartnerAdImpression(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request
-                        )
-                    )
-                }
-            }
 
             // Meta Audience Network is now bidding-only.
             interstitialAd.loadAd(
                 interstitialAd.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(metaListener).build()
+                    .withAdListener(metaListener).build(),
             )
         }
     }
@@ -592,93 +625,98 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     private suspend fun loadRewardedAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        partnerAdListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener,
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
-            val metaListener: RewardedVideoAdListener = object : RewardedVideoAdListener {
-                fun resumeOnce(result: Result<PartnerAd>) {
-                    if (continuation.isActive) {
-                        continuation.resume(result)
+            val metaListener: RewardedVideoAdListener =
+                object : RewardedVideoAdListener {
+                    fun resumeOnce(result: Result<PartnerAd>) {
+                        if (continuation.isActive) {
+                            continuation.resume(result)
+                        }
                     }
-                }
 
-                override fun onRewardedVideoCompleted() {
-                    PartnerLogController.log(DID_REWARD)
-                    partnerAdListener.onPartnerAdRewarded(
-                        PartnerAd(
-                            ad = rewardedVideoAd,
-                            details = emptyMap(),
-                            request = request
+                    override fun onRewardedVideoCompleted() {
+                        PartnerLogController.log(DID_REWARD)
+                        partnerAdListener.onPartnerAdRewarded(
+                            PartnerAd(
+                                ad = rewardedVideoAd,
+                                details = emptyMap(),
+                                request = request,
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onLoggingImpression(ad: Ad) {
-                    PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    partnerAdListener.onPartnerAdImpression(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request
-                        )
-                    )
-                }
-
-                override fun onRewardedVideoClosed() {
-                    PartnerLogController.log(DID_DISMISS)
-                    partnerAdListener.onPartnerAdDismissed(
-                        PartnerAd(
-                            ad = rewardedVideoAd,
-                            details = emptyMap(),
-                            request = request
-                        ), null
-                    )
-                }
-
-                override fun onError(ad: Ad, adError: AdError) {
-                    PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                    resumeOnce(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    adError.errorCode
-                                )
-                            )
-                        )
-                    )
-                }
-
-                override fun onAdLoaded(ad: Ad) {
-                    PartnerLogController.log(LOAD_SUCCEEDED)
-                    resumeOnce(
-                        Result.success(
+                    override fun onLoggingImpression(ad: Ad) {
+                        PartnerLogController.log(DID_TRACK_IMPRESSION)
+                        partnerAdListener.onPartnerAdImpression(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
-                                request = request
-                            )
+                                request = request,
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdClicked(ad: Ad) {
-                    PartnerLogController.log(DID_CLICK)
-                    partnerAdListener.onPartnerAdClicked(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request
+                    override fun onRewardedVideoClosed() {
+                        PartnerLogController.log(DID_DISMISS)
+                        partnerAdListener.onPartnerAdDismissed(
+                            PartnerAd(
+                                ad = rewardedVideoAd,
+                                details = emptyMap(),
+                                request = request,
+                            ),
+                            null,
                         )
-                    )
+                    }
+
+                    override fun onError(
+                        ad: Ad,
+                        adError: AdError,
+                    ) {
+                        PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
+                        resumeOnce(
+                            Result.failure(
+                                ChartboostMediationAdException(
+                                    getChartboostMediationError(
+                                        adError.errorCode,
+                                    ),
+                                ),
+                            ),
+                        )
+                    }
+
+                    override fun onAdLoaded(ad: Ad) {
+                        PartnerLogController.log(LOAD_SUCCEEDED)
+                        resumeOnce(
+                            Result.success(
+                                PartnerAd(
+                                    ad = ad,
+                                    details = emptyMap(),
+                                    request = request,
+                                ),
+                            ),
+                        )
+                    }
+
+                    override fun onAdClicked(ad: Ad) {
+                        PartnerLogController.log(DID_CLICK)
+                        partnerAdListener.onPartnerAdClicked(
+                            PartnerAd(
+                                ad = ad,
+                                details = emptyMap(),
+                                request = request,
+                            ),
+                        )
+                    }
                 }
-            }
 
             // Meta Audience Network is now bidding-only.
             rewardedVideoAd.loadAd(
                 rewardedVideoAd.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(metaListener).build()
+                    .withAdListener(metaListener).build(),
             )
         }
     }
@@ -695,92 +733,97 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     private suspend fun loadRewardedInterstitialAd(
         context: Context,
         request: PartnerAdLoadRequest,
-        partnerAdListener: PartnerAdListener
+        partnerAdListener: PartnerAdListener,
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedInterstitialAd = RewardedInterstitialAd(context, request.partnerPlacement)
-            val metaListener = object : RewardedInterstitialAdListener {
-                fun resumeOnce(result: Result<PartnerAd>) {
-                    if (continuation.isActive) {
-                        continuation.resume(result)
+            val metaListener =
+                object : RewardedInterstitialAdListener {
+                    fun resumeOnce(result: Result<PartnerAd>) {
+                        if (continuation.isActive) {
+                            continuation.resume(result)
+                        }
                     }
-                }
 
-                override fun onError(ad: Ad?, error: AdError) {
-                    PartnerLogController.log(LOAD_FAILED, error.errorMessage)
-                    resumeOnce(
-                        Result.failure(
-                            ChartboostMediationAdException(
-                                getChartboostMediationError(
-                                    error.errorCode
-                                )
-                            )
+                    override fun onError(
+                        ad: Ad?,
+                        error: AdError,
+                    ) {
+                        PartnerLogController.log(LOAD_FAILED, error.errorMessage)
+                        resumeOnce(
+                            Result.failure(
+                                ChartboostMediationAdException(
+                                    getChartboostMediationError(
+                                        error.errorCode,
+                                    ),
+                                ),
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdLoaded(ad: Ad?) {
-                    PartnerLogController.log(LOAD_SUCCEEDED)
-                    resumeOnce(
-                        Result.success(
+                    override fun onAdLoaded(ad: Ad?) {
+                        PartnerLogController.log(LOAD_SUCCEEDED)
+                        resumeOnce(
+                            Result.success(
+                                PartnerAd(
+                                    ad = ad,
+                                    details = emptyMap(),
+                                    request = request,
+                                ),
+                            ),
+                        )
+                    }
+
+                    override fun onAdClicked(ad: Ad?) {
+                        PartnerLogController.log(DID_CLICK)
+                        partnerAdListener.onPartnerAdClicked(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
-                                request = request
-                            )
+                                request = request,
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onAdClicked(ad: Ad?) {
-                    PartnerLogController.log(DID_CLICK)
-                    partnerAdListener.onPartnerAdClicked(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request
+                    override fun onLoggingImpression(ad: Ad?) {
+                        PartnerLogController.log(DID_TRACK_IMPRESSION)
+                        partnerAdListener.onPartnerAdImpression(
+                            PartnerAd(
+                                ad = ad,
+                                details = emptyMap(),
+                                request = request,
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onLoggingImpression(ad: Ad?) {
-                    PartnerLogController.log(DID_TRACK_IMPRESSION)
-                    partnerAdListener.onPartnerAdImpression(
-                        PartnerAd(
-                            ad = ad,
-                            details = emptyMap(),
-                            request = request
+                    override fun onRewardedInterstitialCompleted() {
+                        PartnerLogController.log(DID_REWARD)
+                        partnerAdListener.onPartnerAdRewarded(
+                            PartnerAd(
+                                ad = rewardedInterstitialAd,
+                                details = emptyMap(),
+                                request = request,
+                            ),
                         )
-                    )
-                }
+                    }
 
-                override fun onRewardedInterstitialCompleted() {
-                    PartnerLogController.log(DID_REWARD)
-                    partnerAdListener.onPartnerAdRewarded(
-                        PartnerAd(
-                            ad = rewardedInterstitialAd,
-                            details = emptyMap(),
-                            request = request
+                    override fun onRewardedInterstitialClosed() {
+                        PartnerLogController.log(DID_DISMISS)
+                        partnerAdListener.onPartnerAdDismissed(
+                            PartnerAd(
+                                ad = rewardedInterstitialAd,
+                                details = emptyMap(),
+                                request = request,
+                            ),
+                            null,
                         )
-                    )
+                    }
                 }
-
-                override fun onRewardedInterstitialClosed() {
-                    PartnerLogController.log(DID_DISMISS)
-                    partnerAdListener.onPartnerAdDismissed(
-                        PartnerAd(
-                            ad = rewardedInterstitialAd,
-                            details = emptyMap(),
-                            request = request
-                        ), null
-                    )
-                }
-            }
 
             rewardedInterstitialAd.loadAd(
                 rewardedInterstitialAd.buildLoadAdConfig()
                     .withBid(request.adm)
-                    .withAdListener(metaListener).build()
+                    .withAdListener(metaListener).build(),
             )
         }
     }
@@ -995,14 +1038,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @return The corresponding [ChartboostMediationError].
      */
-    private fun getChartboostMediationError(error: Int) = when (error) {
-        AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-        AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.CM_NO_CONNECTIVITY
-        AdError.SERVER_ERROR_CODE -> ChartboostMediationError.CM_AD_SERVER_ERROR
-        AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-        AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_RATE_LIMITED
-        AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.CM_SHOW_FAILURE_MEDIA_BROKEN
-        AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.CM_LOAD_FAILURE_SHOW_IN_PROGRESS
-        else -> ChartboostMediationError.CM_PARTNER_ERROR
-    }
+    private fun getChartboostMediationError(error: Int) =
+        when (error) {
+            AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
+            AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.CM_NO_CONNECTIVITY
+            AdError.SERVER_ERROR_CODE -> ChartboostMediationError.CM_AD_SERVER_ERROR
+            AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
+            AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_RATE_LIMITED
+            AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.CM_SHOW_FAILURE_MEDIA_BROKEN
+            AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.CM_LOAD_FAILURE_SHOW_IN_PROGRESS
+            else -> ChartboostMediationError.CM_PARTNER_ERROR
+        }
 }
