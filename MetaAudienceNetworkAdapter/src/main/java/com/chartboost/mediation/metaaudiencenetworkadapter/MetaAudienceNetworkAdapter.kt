@@ -333,10 +333,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     resumeOnce(Result.success(partnerAd))
                     return@suspendCancellableCoroutine
                 }
-                AdFormat.INTERSTITIAL.key -> {
-                    resumeOnce(showInterstitialAd(partnerAd))
-                    return@suspendCancellableCoroutine
-                }
+                AdFormat.INTERSTITIAL.key -> showInterstitialAd(partnerAd)
                 AdFormat.REWARDED.key -> {
                     resumeOnce(showRewardedAd(partnerAd))
                     return@suspendCancellableCoroutine
