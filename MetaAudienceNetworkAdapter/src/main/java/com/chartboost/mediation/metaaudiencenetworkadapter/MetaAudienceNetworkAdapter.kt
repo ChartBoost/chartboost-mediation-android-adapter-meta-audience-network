@@ -20,6 +20,7 @@ import com.facebook.ads.BuildConfig.VERSION_NAME
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import java.lang.ref.WeakReference
 import java.util.Collections.emptyMap
 import kotlin.coroutines.resume
 
@@ -313,9 +314,15 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         PartnerLogController.log(SHOW_STARTED)
 
         return suspendCancellableCoroutine { continuation ->
+            val weakContinuationRef = WeakReference(continuation)
+
             fun resumeOnce(result: Result<PartnerAd>) {
-                if (continuation.isActive) {
-                    continuation.resume(result)
+                weakContinuationRef.get()?.let {
+                    if (it.isActive) {
+                        it.resume(result)
+                    }
+                } ?: run {
+                    PartnerLogController.log(SHOW_FAILED, "Unable to resume continuation once. Continuation is null.")
                 }
             }
 
@@ -326,7 +333,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     resumeOnce(Result.success(partnerAd))
                     return@suspendCancellableCoroutine
                 }
-                AdFormat.INTERSTITIAL.key -> showInterstitialAd(partnerAd)
+                AdFormat.INTERSTITIAL.key -> {
+                    resumeOnce(showInterstitialAd(partnerAd))
+                    return@suspendCancellableCoroutine
+                }
                 AdFormat.REWARDED.key -> {
                     resumeOnce(showRewardedAd(partnerAd))
                     return@suspendCancellableCoroutine
