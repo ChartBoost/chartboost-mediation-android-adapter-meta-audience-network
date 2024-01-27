@@ -17,6 +17,7 @@ import com.chartboost.mediation.metaaudiencenetworkadapter.BuildConfig.CHARTBOOS
 import com.facebook.ads.*
 import com.facebook.ads.Ad
 import com.facebook.ads.BuildConfig.VERSION_NAME
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -67,17 +68,36 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                         },
                 )
             }
+
+        /**
+         * Convert a given Meta Audience Network error code into a [ChartboostMediationError].
+         *
+         * @param error The Meta [AdError] to convert.
+         *
+         * @return The corresponding [ChartboostMediationError].
+         */
+        internal fun getChartboostMediationError(error: Int) =
+            when (error) {
+                AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
+                AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.CM_NO_CONNECTIVITY
+                AdError.SERVER_ERROR_CODE -> ChartboostMediationError.CM_AD_SERVER_ERROR
+                AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
+                AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_RATE_LIMITED
+                AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.CM_SHOW_FAILURE_MEDIA_BROKEN
+                AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.CM_LOAD_FAILURE_SHOW_IN_PROGRESS
+                else -> ChartboostMediationError.CM_PARTNER_ERROR
+            }
+
+        /**
+         * Lambda to be called for a successful Meta Audience Network interstitial ad show.
+         */
+        internal var onInterstitialAdShowSuccess: () -> Unit = {}
+
+        /**
+         * Lambda to be called for a failed Meta Audience Network interstitial ad show.
+         */
+        internal var onInterstitialAdShowFailure: () -> Unit = {}
     }
-
-    /**
-     * Lambda to be called for a successful Meta Audience Network interstitial ad show.
-     */
-    private var onInterstitialAdShowSuccess: () -> Unit = {}
-
-    /**
-     * Lambda to be called for a failed Meta Audience Network interstitial ad show.
-     */
-    private var onInterstitialAdShowFailure: () -> Unit = {}
 
     /**
      * Get the Meta Audience Network SDK version.
@@ -523,93 +543,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
-            val metaListener: InterstitialAdListener =
-                object : InterstitialAdListener {
-                    fun resumeOnce(result: Result<PartnerAd>) {
-                        if (continuation.isActive) {
-                            continuation.resume(result)
-                        }
-                    }
-
-                    override fun onInterstitialDisplayed(ad: Ad) {
-                        when {
-                            ad.isAdInvalidated -> {
-                                partnerAdListener.onPartnerAdExpired(
-                                    PartnerAd(
-                                        ad = ad,
-                                        details = emptyMap(),
-                                        request = request,
-                                    ),
-                                )
-                                onInterstitialAdShowFailure()
-                            }
-                            else -> onInterstitialAdShowSuccess()
-                        }
-                    }
-
-                    override fun onInterstitialDismissed(ad: Ad?) {
-                        PartnerLogController.log(DID_DISMISS)
-                        partnerAdListener.onPartnerAdDismissed(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                            null,
-                        )
-                    }
-
-                    override fun onError(
-                        ad: Ad,
-                        adError: AdError,
-                    ) {
-                        PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                        resumeOnce(
-                            Result.failure(
-                                ChartboostMediationAdException(
-                                    getChartboostMediationError(
-                                        adError.errorCode,
-                                    ),
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onAdLoaded(ad: Ad) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
-                        resumeOnce(
-                            Result.success(
-                                PartnerAd(
-                                    ad = ad,
-                                    details = emptyMap(),
-                                    request = request,
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onAdClicked(ad: Ad) {
-                        PartnerLogController.log(DID_CLICK)
-                        partnerAdListener.onPartnerAdClicked(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-
-                    override fun onLoggingImpression(ad: Ad) {
-                        PartnerLogController.log(DID_TRACK_IMPRESSION)
-                        partnerAdListener.onPartnerAdImpression(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-                }
+            val metaListener = MetaInterstitialAdListener(
+                continuationRef = WeakReference(continuation),
+                request = request,
+                partnerAdListener = partnerAdListener,
+                interstitialAd = interstitialAd,
+            )
 
             // Meta Audience Network is now bidding-only.
             interstitialAd.loadAd(
@@ -636,88 +575,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
-            val metaListener: RewardedVideoAdListener =
-                object : RewardedVideoAdListener {
-                    fun resumeOnce(result: Result<PartnerAd>) {
-                        if (continuation.isActive) {
-                            continuation.resume(result)
-                        }
-                    }
-
-                    override fun onRewardedVideoCompleted() {
-                        PartnerLogController.log(DID_REWARD)
-                        partnerAdListener.onPartnerAdRewarded(
-                            PartnerAd(
-                                ad = rewardedVideoAd,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-
-                    override fun onLoggingImpression(ad: Ad) {
-                        PartnerLogController.log(DID_TRACK_IMPRESSION)
-                        partnerAdListener.onPartnerAdImpression(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-
-                    override fun onRewardedVideoClosed() {
-                        PartnerLogController.log(DID_DISMISS)
-                        partnerAdListener.onPartnerAdDismissed(
-                            PartnerAd(
-                                ad = rewardedVideoAd,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                            null,
-                        )
-                    }
-
-                    override fun onError(
-                        ad: Ad,
-                        adError: AdError,
-                    ) {
-                        PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
-                        resumeOnce(
-                            Result.failure(
-                                ChartboostMediationAdException(
-                                    getChartboostMediationError(
-                                        adError.errorCode,
-                                    ),
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onAdLoaded(ad: Ad) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
-                        resumeOnce(
-                            Result.success(
-                                PartnerAd(
-                                    ad = ad,
-                                    details = emptyMap(),
-                                    request = request,
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onAdClicked(ad: Ad) {
-                        PartnerLogController.log(DID_CLICK)
-                        partnerAdListener.onPartnerAdClicked(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-                }
+            val metaListener = RewardedAdListener(
+                continuationRef = WeakReference(continuation),
+                request = request,
+                partnerAdListener = partnerAdListener,
+                rewardedVideoAd = rewardedVideoAd,
+            )
 
             // Meta Audience Network is now bidding-only.
             rewardedVideoAd.loadAd(
@@ -744,88 +607,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedInterstitialAd = RewardedInterstitialAd(context, request.partnerPlacement)
-            val metaListener =
-                object : RewardedInterstitialAdListener {
-                    fun resumeOnce(result: Result<PartnerAd>) {
-                        if (continuation.isActive) {
-                            continuation.resume(result)
-                        }
-                    }
-
-                    override fun onError(
-                        ad: Ad?,
-                        error: AdError,
-                    ) {
-                        PartnerLogController.log(LOAD_FAILED, error.errorMessage)
-                        resumeOnce(
-                            Result.failure(
-                                ChartboostMediationAdException(
-                                    getChartboostMediationError(
-                                        error.errorCode,
-                                    ),
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onAdLoaded(ad: Ad?) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
-                        resumeOnce(
-                            Result.success(
-                                PartnerAd(
-                                    ad = ad,
-                                    details = emptyMap(),
-                                    request = request,
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onAdClicked(ad: Ad?) {
-                        PartnerLogController.log(DID_CLICK)
-                        partnerAdListener.onPartnerAdClicked(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-
-                    override fun onLoggingImpression(ad: Ad?) {
-                        PartnerLogController.log(DID_TRACK_IMPRESSION)
-                        partnerAdListener.onPartnerAdImpression(
-                            PartnerAd(
-                                ad = ad,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-
-                    override fun onRewardedInterstitialCompleted() {
-                        PartnerLogController.log(DID_REWARD)
-                        partnerAdListener.onPartnerAdRewarded(
-                            PartnerAd(
-                                ad = rewardedInterstitialAd,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                        )
-                    }
-
-                    override fun onRewardedInterstitialClosed() {
-                        PartnerLogController.log(DID_DISMISS)
-                        partnerAdListener.onPartnerAdDismissed(
-                            PartnerAd(
-                                ad = rewardedInterstitialAd,
-                                details = emptyMap(),
-                                request = request,
-                            ),
-                            null,
-                        )
-                    }
-                }
+            val metaListener = MetaRewardedInterstitialAdListener(
+                continuationRef = WeakReference(continuation),
+                request = request,
+                partnerAdListener = partnerAdListener,
+                rewardedInterstitialAd = rewardedInterstitialAd,
+            )
 
             rewardedInterstitialAd.loadAd(
                 rewardedInterstitialAd.buildLoadAdConfig()
@@ -1039,21 +826,311 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
-     * Convert a given Meta Audience Network error code into a [ChartboostMediationError].
+     * Callback for interstitial ads.
      *
-     * @param error The Meta [AdError] to convert.
-     *
-     * @return The corresponding [ChartboostMediationError].
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param request A [PartnerAdLoadRequest] object containing the request.
+     * @param partnerAdListener A [PartnerAdListener] to be notified of ad events.
+     * @param interstitialAd A [InterstitialAd] object containing the interstitial ad.
      */
-    private fun getChartboostMediationError(error: Int) =
-        when (error) {
-            AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-            AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.CM_NO_CONNECTIVITY
-            AdError.SERVER_ERROR_CODE -> ChartboostMediationError.CM_AD_SERVER_ERROR
-            AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-            AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_RATE_LIMITED
-            AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.CM_SHOW_FAILURE_MEDIA_BROKEN
-            AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.CM_LOAD_FAILURE_SHOW_IN_PROGRESS
-            else -> ChartboostMediationError.CM_PARTNER_ERROR
+    private class MetaInterstitialAdListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val request: PartnerAdLoadRequest,
+        private val partnerAdListener: PartnerAdListener,
+        private val interstitialAd: InterstitialAd,
+    ): InterstitialAdListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    LOAD_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
         }
+
+        override fun onInterstitialDisplayed(ad: Ad) {
+            when {
+                ad.isAdInvalidated -> {
+                    partnerAdListener.onPartnerAdExpired(
+                        PartnerAd(
+                            ad = ad,
+                            details = emptyMap(),
+                            request = request,
+                        ),
+                    )
+                    onInterstitialAdShowFailure()
+                    onInterstitialAdShowFailure = {}
+                }
+                else -> {
+                    onInterstitialAdShowSuccess()
+                    onInterstitialAdShowSuccess = {}
+                }
+            }
+        }
+
+        override fun onInterstitialDismissed(ad: Ad?) {
+            PartnerLogController.log(DID_DISMISS)
+            partnerAdListener.onPartnerAdDismissed(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+                null,
+            )
+        }
+
+        override fun onError(
+            ad: Ad,
+            adError: AdError,
+        ) {
+            PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
+            resumeOnce(
+                Result.failure(
+                    ChartboostMediationAdException(
+                        getChartboostMediationError(
+                            adError.errorCode,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdLoaded(ad: Ad) {
+            PartnerLogController.log(LOAD_SUCCEEDED)
+            resumeOnce(
+                Result.success(
+                    PartnerAd(
+                        ad = ad,
+                        details = emptyMap(),
+                        request = request,
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdClicked(ad: Ad) {
+            PartnerLogController.log(DID_CLICK)
+            partnerAdListener.onPartnerAdClicked(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+
+        override fun onLoggingImpression(ad: Ad) {
+            PartnerLogController.log(DID_TRACK_IMPRESSION)
+            partnerAdListener.onPartnerAdImpression(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Callback for rewarded ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param request A [PartnerAdLoadRequest] object containing the request.
+     * @param partnerAdListener A [PartnerAdListener] to be notified of ad events.
+     * @param rewardedVideoAd A [RewardedVideoAd] object containing the rewarded video ad.
+     */
+    private class RewardedAdListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val request: PartnerAdLoadRequest,
+        private val partnerAdListener: PartnerAdListener,
+        private val rewardedVideoAd: RewardedVideoAd,
+    ): RewardedVideoAdListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(LOAD_FAILED, "Unable to resume continuation. Continuation is null.")
+            }
+        }
+
+        override fun onRewardedVideoCompleted() {
+            PartnerLogController.log(DID_REWARD)
+            partnerAdListener.onPartnerAdRewarded(
+                PartnerAd(
+                    ad = rewardedVideoAd,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+
+        override fun onLoggingImpression(ad: Ad) {
+            PartnerLogController.log(DID_TRACK_IMPRESSION)
+            partnerAdListener.onPartnerAdImpression(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+
+        override fun onRewardedVideoClosed() {
+            PartnerLogController.log(DID_DISMISS)
+            partnerAdListener.onPartnerAdDismissed(
+                PartnerAd(
+                    ad = rewardedVideoAd,
+                    details = emptyMap(),
+                    request = request,
+                ),
+                null,
+            )
+        }
+
+        override fun onError(
+            ad: Ad,
+            adError: AdError,
+        ) {
+            PartnerLogController.log(LOAD_FAILED, adError.errorMessage)
+            resumeOnce(
+                Result.failure(
+                    ChartboostMediationAdException(
+                        getChartboostMediationError(
+                            adError.errorCode,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdLoaded(ad: Ad) {
+            PartnerLogController.log(LOAD_SUCCEEDED)
+            resumeOnce(
+                Result.success(
+                    PartnerAd(
+                        ad = ad,
+                        details = emptyMap(),
+                        request = request,
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdClicked(ad: Ad) {
+            PartnerLogController.log(DID_CLICK)
+            partnerAdListener.onPartnerAdClicked(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Callback for rewarded interstitial ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param request A [PartnerAdLoadRequest] object containing the request.
+     * @param partnerAdListener A [PartnerAdListener] to be notified of ad events.
+     * @param rewardedVideoAd A [RewardedVideoAd] object containing the rewarded video ad.
+     */
+    private class MetaRewardedInterstitialAdListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val request: PartnerAdLoadRequest,
+        private val partnerAdListener: PartnerAdListener,
+        private val rewardedInterstitialAd: RewardedInterstitialAd,
+    ): RewardedInterstitialAdListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(LOAD_FAILED, "Unable to resume continuation. Continuation is null.")
+            }
+        }
+
+        override fun onError(
+            ad: Ad?,
+            error: AdError,
+        ) {
+            PartnerLogController.log(LOAD_FAILED, error.errorMessage)
+            resumeOnce(
+                Result.failure(
+                    ChartboostMediationAdException(
+                        getChartboostMediationError(
+                            error.errorCode,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdLoaded(ad: Ad?) {
+            PartnerLogController.log(LOAD_SUCCEEDED)
+            resumeOnce(
+                Result.success(
+                    PartnerAd(
+                        ad = ad,
+                        details = emptyMap(),
+                        request = request,
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdClicked(ad: Ad?) {
+            PartnerLogController.log(DID_CLICK)
+            partnerAdListener.onPartnerAdClicked(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+
+        override fun onLoggingImpression(ad: Ad?) {
+            PartnerLogController.log(DID_TRACK_IMPRESSION)
+            partnerAdListener.onPartnerAdImpression(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+
+        override fun onRewardedInterstitialCompleted() {
+            PartnerLogController.log(DID_REWARD)
+            partnerAdListener.onPartnerAdRewarded(
+                PartnerAd(
+                    ad = rewardedInterstitialAd,
+                    details = emptyMap(),
+                    request = request,
+                ),
+            )
+        }
+
+        override fun onRewardedInterstitialClosed() {
+            PartnerLogController.log(DID_DISMISS)
+            partnerAdListener.onPartnerAdDismissed(
+                PartnerAd(
+                    ad = rewardedInterstitialAd,
+                    details = emptyMap(),
+                    request = request,
+                ),
+                null,
+            )
+        }
+    }
 }
