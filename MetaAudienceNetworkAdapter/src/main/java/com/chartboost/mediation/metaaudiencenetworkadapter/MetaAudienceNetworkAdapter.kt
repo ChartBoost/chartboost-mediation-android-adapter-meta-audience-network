@@ -575,7 +575,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
-            val metaListener = RewardedAdListener(
+            val metaListener = MetaRewardedAdListener(
                 continuationRef = WeakReference(continuation),
                 request = request,
                 partnerAdListener = partnerAdListener,
@@ -831,7 +831,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
      * @param request A [PartnerAdLoadRequest] object containing the request.
      * @param partnerAdListener A [PartnerAdListener] to be notified of ad events.
-     * @param interstitialAd A [InterstitialAd] object containing the interstitial ad.
+     * @param interstitialAd An [InterstitialAd] object containing the interstitial ad.
      */
     private class MetaInterstitialAdListener(
         private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
@@ -944,7 +944,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @param partnerAdListener A [PartnerAdListener] to be notified of ad events.
      * @param rewardedVideoAd A [RewardedVideoAd] object containing the rewarded video ad.
      */
-    private class RewardedAdListener(
+    private class MetaRewardedAdListener(
         private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
         private val request: PartnerAdLoadRequest,
         private val partnerAdListener: PartnerAdListener,
@@ -1041,7 +1041,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
      * @param request A [PartnerAdLoadRequest] object containing the request.
      * @param partnerAdListener A [PartnerAdListener] to be notified of ad events.
-     * @param rewardedVideoAd A [RewardedVideoAd] object containing the rewarded video ad.
+     * @param rewardedInterstitialAd A [RewardedVideoAd] object containing the rewarded video ad.
      */
     private class MetaRewardedInterstitialAdListener(
         private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
