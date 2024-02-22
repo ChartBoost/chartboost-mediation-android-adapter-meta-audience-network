@@ -1,6 +1,6 @@
 /*
  * Copyright 2023-2024 Chartboost, Inc.
- * 
+ *
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file.
  */
@@ -10,9 +10,9 @@ package com.chartboost.mediation.metaaudiencenetworkadapter
 import android.content.Context
 import android.util.Size
 import android.view.View
-import com.chartboost.heliumsdk.domain.*
-import com.chartboost.heliumsdk.utils.PartnerLogController
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.chartboostmediationsdk.domain.*
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.*
 import com.chartboost.mediation.metaaudiencenetworkadapter.BuildConfig.CHARTBOOST_MEDIATION_META_AUDIENCE_NETWORK_ADAPTER_VERSION
 import com.facebook.ads.*
 import com.facebook.ads.Ad
@@ -543,12 +543,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val interstitialAd = InterstitialAd(context, request.partnerPlacement)
-            val metaListener = MetaInterstitialAdListener(
-                continuationRef = WeakReference(continuation),
-                request = request,
-                partnerAdListener = partnerAdListener,
-                interstitialAd = interstitialAd,
-            )
+            val metaListener =
+                MetaInterstitialAdListener(
+                    continuationRef = WeakReference(continuation),
+                    request = request,
+                    partnerAdListener = partnerAdListener,
+                    interstitialAd = interstitialAd,
+                )
 
             // Meta Audience Network is now bidding-only.
             interstitialAd.loadAd(
@@ -575,12 +576,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedVideoAd = RewardedVideoAd(context, request.partnerPlacement)
-            val metaListener = MetaRewardedAdListener(
-                continuationRef = WeakReference(continuation),
-                request = request,
-                partnerAdListener = partnerAdListener,
-                rewardedVideoAd = rewardedVideoAd,
-            )
+            val metaListener =
+                MetaRewardedAdListener(
+                    continuationRef = WeakReference(continuation),
+                    request = request,
+                    partnerAdListener = partnerAdListener,
+                    rewardedVideoAd = rewardedVideoAd,
+                )
 
             // Meta Audience Network is now bidding-only.
             rewardedVideoAd.loadAd(
@@ -607,12 +609,13 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         return suspendCancellableCoroutine { continuation ->
             val rewardedInterstitialAd = RewardedInterstitialAd(context, request.partnerPlacement)
-            val metaListener = MetaRewardedInterstitialAdListener(
-                continuationRef = WeakReference(continuation),
-                request = request,
-                partnerAdListener = partnerAdListener,
-                rewardedInterstitialAd = rewardedInterstitialAd,
-            )
+            val metaListener =
+                MetaRewardedInterstitialAdListener(
+                    continuationRef = WeakReference(continuation),
+                    request = request,
+                    partnerAdListener = partnerAdListener,
+                    rewardedInterstitialAd = rewardedInterstitialAd,
+                )
 
             rewardedInterstitialAd.loadAd(
                 rewardedInterstitialAd.buildLoadAdConfig()
@@ -838,7 +841,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         private val request: PartnerAdLoadRequest,
         private val partnerAdListener: PartnerAdListener,
         private val interstitialAd: InterstitialAd,
-    ): InterstitialAdListener {
+    ) : InterstitialAdListener {
         fun resumeOnce(result: Result<PartnerAd>) {
             continuationRef.get()?.let {
                 if (it.isActive) {
@@ -847,7 +850,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             } ?: run {
                 PartnerLogController.log(
                     LOAD_FAILED,
-                    "Unable to resume continuation. Continuation is null."
+                    "Unable to resume continuation. Continuation is null.",
                 )
             }
         }
@@ -949,7 +952,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         private val request: PartnerAdLoadRequest,
         private val partnerAdListener: PartnerAdListener,
         private val rewardedVideoAd: RewardedVideoAd,
-    ): RewardedVideoAdListener {
+    ) : RewardedVideoAdListener {
         fun resumeOnce(result: Result<PartnerAd>) {
             continuationRef.get()?.let {
                 if (it.isActive) {
@@ -1048,7 +1051,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         private val request: PartnerAdLoadRequest,
         private val partnerAdListener: PartnerAdListener,
         private val rewardedInterstitialAd: RewardedInterstitialAd,
-    ): RewardedInterstitialAdListener {
+    ) : RewardedInterstitialAdListener {
         fun resumeOnce(result: Result<PartnerAd>) {
             continuationRef.get()?.let {
                 if (it.isActive) {
