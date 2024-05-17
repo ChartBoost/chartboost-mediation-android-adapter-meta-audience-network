@@ -38,14 +38,14 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
          */
         internal fun getChartboostMediationError(error: Int) =
             when (error) {
-                AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-                AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.CM_NO_CONNECTIVITY
-                AdError.SERVER_ERROR_CODE -> ChartboostMediationError.CM_AD_SERVER_ERROR
-                AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-                AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.CM_LOAD_FAILURE_RATE_LIMITED
-                AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.CM_SHOW_FAILURE_MEDIA_BROKEN
-                AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.CM_LOAD_FAILURE_SHOW_IN_PROGRESS
-                else -> ChartboostMediationError.CM_PARTNER_ERROR
+                AdError.NO_FILL_ERROR_CODE -> ChartboostMediationError.LoadError.NoFill
+                AdError.NETWORK_ERROR_CODE -> ChartboostMediationError.OtherError.NoConnectivity
+                AdError.SERVER_ERROR_CODE -> ChartboostMediationError.OtherError.AdServerError
+                AdError.INTERSTITIAL_AD_TIMEOUT -> ChartboostMediationError.LoadError.AdRequestTimeout
+                AdError.LOAD_TOO_FREQUENTLY_ERROR_CODE -> ChartboostMediationError.LoadError.RateLimited
+                AdError.BROKEN_MEDIA_ERROR_CODE -> ChartboostMediationError.ShowError.MediaBroken
+                AdError.LOAD_CALLED_WHILE_SHOWING_AD -> ChartboostMediationError.LoadError.ShowInProgress
+                else -> ChartboostMediationError.OtherError.PartnerError
             }
 
         /**
@@ -245,7 +245,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     )
                 } else {
                     PartnerLogController.log(LOAD_FAILED)
-                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
                 }
             }
         }
@@ -299,7 +299,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                         resumeOnce(
                             Result.failure(
                                 ChartboostMediationAdException(
-                                    ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT,
+                                    ChartboostMediationError.ShowError.UnsupportedAdFormat,
                                 ),
                             ),
                         )
@@ -319,7 +319,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 resumeOnce(
                     Result.failure(
                         ChartboostMediationAdException(
-                            ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN,
+                            ChartboostMediationError.ShowError.Unknown,
                         ),
                     ),
                 )
@@ -364,7 +364,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
         } else {
             PartnerLogController.log(SETUP_FAILED, "${result.message}.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.Unknown))
         }
     }
 
@@ -571,11 +571,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotReady))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotFound))
         }
     }
 
@@ -595,11 +595,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotReady))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotFound))
         }
     }
 
@@ -619,11 +619,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotReady))
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotFound))
         }
     }
 
@@ -661,11 +661,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an AdView.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.WrongResourceType))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 
@@ -685,11 +685,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not an InterstitialAd.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.WrongResourceType))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 
@@ -709,11 +709,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedVideoAd.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.WrongResourceType))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 
@@ -733,11 +733,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 Result.success(partnerAd)
             } else {
                 PartnerLogController.log(INVALIDATE_FAILED, "Ad is not a RewardedInterstitialAd.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.WrongResourceType))
             }
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 

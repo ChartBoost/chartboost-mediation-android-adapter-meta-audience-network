@@ -44,14 +44,14 @@ object MetaAudienceNetworkAdapterConfiguration : PartnerAdapterConfiguration {
             field = value
             AdSettings.setTestMode(value)
             PartnerLogController.log(
-                    PartnerLogController.PartnerAdapterEvents.CUSTOM,
-                    "Meta Audience Network test mode is ${
-                        if (value) {
-                            "enabled. Remember to disable it before publishing."
-                        } else {
-                            "disabled."
-                        }
-                    }",
+                PartnerLogController.PartnerAdapterEvents.CUSTOM,
+                "Meta Audience Network test mode is ${
+                    if (value) {
+                        "enabled. Remember to disable it before publishing."
+                    } else {
+                        "disabled."
+                    }
+                }",
             )
         }
 
@@ -63,13 +63,13 @@ object MetaAudienceNetworkAdapterConfiguration : PartnerAdapterConfiguration {
         set(value) {
             field = value
             PartnerLogController.log(
-                    PartnerLogController.PartnerAdapterEvents.CUSTOM,
-                    "Meta Audience Network placement IDs " +
-                            if (value.isEmpty()) {
-                                "not provided for initialization."
-                            } else {
-                                "provided for initialization: ${value.joinToString()}."
-                            },
+                PartnerLogController.PartnerAdapterEvents.CUSTOM,
+                "Meta Audience Network placement IDs " +
+                    if (value.isEmpty()) {
+                        "not provided for initialization."
+                    } else {
+                        "provided for initialization: ${value.joinToString()}."
+                    },
             )
         }
 }
