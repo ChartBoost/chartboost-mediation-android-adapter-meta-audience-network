@@ -13,7 +13,36 @@ import android.util.Size
 import android.view.View
 import com.chartboost.chartboostmediationsdk.domain.*
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
-import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_CLICK
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_DISMISS
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_REWARD
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_TRACK_IMPRESSION
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_NOT_UNDERAGE
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_UNDERAGE
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_DENIED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_GRANTED
+import com.chartboost.core.consent.ConsentKey
+import com.chartboost.core.consent.ConsentKeys
+import com.chartboost.core.consent.ConsentManagementPlatform
+import com.chartboost.core.consent.ConsentValue
+import com.chartboost.mediation.metaaudiencenetworkadapter.MetaAudienceNetworkAdapter.Companion.getChartboostMediationError
+import com.chartboost.mediation.metaaudiencenetworkadapter.MetaAudienceNetworkAdapter.Companion.onInterstitialAdShowFailure
+import com.chartboost.mediation.metaaudiencenetworkadapter.MetaAudienceNetworkAdapter.Companion.onInterstitialAdShowSuccess
 import com.facebook.ads.*
 import com.facebook.ads.Ad
 import kotlinx.coroutines.CancellableContinuation
@@ -75,11 +104,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override suspend fun setUp(
         context: Context,
         partnerConfiguration: PartnerConfiguration,
-    ): Result<Unit> {
+    ): Result<Map<String, Any>> {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCancellableCoroutine { continuation ->
-            fun resumeOnce(result: Result<Unit>) {
+            fun resumeOnce(result: Result<Map<String, Any>>) {
                 if (continuation.isActive) {
                     continuation.resume(result)
                 }
@@ -96,100 +125,38 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     }
 
     /**
-     * Notify the Meta Audience Network SDK of the GDPR applicability and consent status.
-     *
-     * @param context The current [Context].
-     * @param applies True if GDPR applies, false otherwise.
-     * @param gdprConsentStatus The user's GDPR consent status.
-     */
-    override fun setGdpr(
-        context: Context,
-        applies: Boolean?,
-        gdprConsentStatus: GdprConsentStatus,
-    ) {
-        PartnerLogController.log(
-            when (applies) {
-                true -> GDPR_APPLICABLE
-                false -> GDPR_NOT_APPLICABLE
-                else -> GDPR_UNKNOWN
-            },
-        )
-
-        PartnerLogController.log(
-            when (gdprConsentStatus) {
-                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPR_CONSENT_UNKNOWN
-                GdprConsentStatus.GDPR_CONSENT_GRANTED -> GDPR_CONSENT_GRANTED
-                GdprConsentStatus.GDPR_CONSENT_DENIED -> GDPR_CONSENT_DENIED
-            },
-        )
-
-        // NO-OP. Meta Audience Network internally handles GDPR.
-    }
-
-    /**
-     * Notify Meta Audience Network of the CCPA compliance.
-     *
-     * @param context The current [Context].
-     * @param hasGrantedCcpaConsent True if the user has granted CCPA consent, false otherwise.
-     * @param privacyString The CCPA privacy String.
-     */
-    override fun setCcpaConsent(
-        context: Context,
-        hasGrantedCcpaConsent: Boolean,
-        privacyString: String,
-    ) {
-        PartnerLogController.log(
-            if (hasGrantedCcpaConsent) {
-                CCPA_CONSENT_GRANTED
-            } else {
-                CCPA_CONSENT_DENIED
-            },
-        )
-
-        AdSettings.setDataProcessingOptions(
-            if (hasGrantedCcpaConsent) {
-                arrayOf()
-            } else {
-                arrayOf("LDU")
-            },
-            1,
-            1000,
-        )
-    }
-
-    /**
      * Notify Meta Audience Network of the COPPA subjectivity.
      *
      * @param context The current [Context].
-     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
+     * @param isUserUnderage True if the user is subject to COPPA, false otherwise.
      */
-    override fun setUserSubjectToCoppa(
+    override fun setIsUserUnderage(
         context: Context,
-        isSubjectToCoppa: Boolean,
+        isUserUnderage: Boolean,
     ) {
         PartnerLogController.log(
-            if (isSubjectToCoppa) {
-                COPPA_SUBJECT
+            if (isUserUnderage) {
+                USER_IS_UNDERAGE
             } else {
-                COPPA_NOT_SUBJECT
+                USER_IS_NOT_UNDERAGE
             },
         )
 
-        AdSettings.setMixedAudience(isSubjectToCoppa)
+        AdSettings.setMixedAudience(isUserUnderage)
     }
 
     /**
      * Get a bid token if network bidding is supported.
      *
      * @param context The current [Context].
-     * @param request The [PreBidRequest] instance containing relevant data for the current bid request.
+     * @param request The [PartnerAdPreBidRequest] instance containing relevant data for the current bid request.
      *
      * @return A Map of biddable token Strings.
      */
     override suspend fun fetchBidderInformation(
         context: Context,
-        request: PreBidRequest,
-    ): Map<String, String> {
+        request: PartnerAdPreBidRequest,
+    ): Result<Map<String, String>> {
         PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
 
         // Meta's getBidderToken() needs to be called on a background thread.
@@ -197,7 +164,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
             val token = BidderTokenProvider.getBidderToken(context) ?: ""
 
             PartnerLogController.log(if (token.isEmpty()) BIDDER_INFO_FETCH_FAILED else BIDDER_INFO_FETCH_SUCCEEDED)
-            hashMapOf("buyeruid" to token)
+            Result.success(hashMapOf("buyeruid" to token))
         }
     }
 
@@ -217,36 +184,35 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format.key) {
-            AdFormat.INTERSTITIAL.key ->
+        return when (request.format) {
+            PartnerAdFormats.INTERSTITIAL ->
                 loadInterstitialAd(
                     context,
                     request,
                     partnerAdListener,
                 )
-            AdFormat.REWARDED.key ->
+            PartnerAdFormats.REWARDED ->
                 loadRewardedAd(
                     context,
                     request,
                     partnerAdListener,
                 )
-            AdFormat.BANNER.key, "adaptive_banner" ->
+            PartnerAdFormats.BANNER ->
                 loadBannerAd(
                     context,
                     request,
                     partnerAdListener,
                 )
-            else -> {
-                if (request.format.key == "rewarded_interstitial") {
+            PartnerAdFormats.REWARDED_INTERSTITIAL -> {
                     loadRewardedInterstitialAd(
                         context,
                         request,
                         partnerAdListener,
                     )
-                } else {
-                    PartnerLogController.log(LOAD_FAILED)
-                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
-                }
+            }
+            else -> {
+                PartnerLogController.log(LOAD_FAILED)
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
             }
         }
     }
@@ -278,33 +244,32 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 }
             }
 
-            when (partnerAd.request.format.key) {
-                AdFormat.BANNER.key, "adaptive_banner" -> {
+            when (partnerAd.request.format) {
+                PartnerAdFormats.BANNER -> {
                     // Banner ads do not have a separate "show" mechanism.
                     PartnerLogController.log(SHOW_SUCCEEDED)
                     resumeOnce(Result.success(partnerAd))
                     return@suspendCancellableCoroutine
                 }
-                AdFormat.INTERSTITIAL.key -> showInterstitialAd(partnerAd)
-                AdFormat.REWARDED.key -> {
+                PartnerAdFormats.INTERSTITIAL -> showInterstitialAd(partnerAd)
+                PartnerAdFormats.REWARDED -> {
                     resumeOnce(showRewardedAd(partnerAd))
                     return@suspendCancellableCoroutine
                 }
-                else -> {
-                    if (partnerAd.request.format.key == "rewarded_interstitial") {
+                PartnerAdFormats.REWARDED_INTERSTITIAL -> {
                         resumeOnce(showRewardedInterstitialAd(partnerAd))
                         return@suspendCancellableCoroutine
-                    } else {
-                        PartnerLogController.log(SHOW_FAILED)
-                        resumeOnce(
-                            Result.failure(
-                                ChartboostMediationAdException(
-                                    ChartboostMediationError.ShowError.UnsupportedAdFormat,
-                                ),
+                }
+                else -> {
+                    PartnerLogController.log(SHOW_FAILED)
+                    resumeOnce(
+                        Result.failure(
+                            ChartboostMediationAdException(
+                                ChartboostMediationError.ShowError.UnsupportedAdFormat,
                             ),
-                        )
-                        return@suspendCancellableCoroutine
-                    }
+                        ),
+                    )
+                    return@suspendCancellableCoroutine
                 }
             }
 
@@ -337,18 +302,42 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(INVALIDATE_STARTED)
 
-        return when (partnerAd.request.format.key) {
-            AdFormat.BANNER.key, "adaptive_banner" -> destroyBannerAd(partnerAd)
-            AdFormat.INTERSTITIAL.key -> destroyInterstitialAd(partnerAd)
-            AdFormat.REWARDED.key -> destroyRewardedAd(partnerAd)
+        return when (partnerAd.request.format) {
+            PartnerAdFormats.BANNER -> destroyBannerAd(partnerAd)
+            PartnerAdFormats.INTERSTITIAL -> destroyInterstitialAd(partnerAd)
+            PartnerAdFormats.REWARDED -> destroyRewardedAd(partnerAd)
+            PartnerAdFormats.REWARDED_INTERSTITIAL -> destroyRewardedInterstitialAd(partnerAd)
             else -> {
-                if (partnerAd.request.format.key == "rewarded_interstitial") {
-                    destroyRewardedInterstitialAd(partnerAd)
-                } else {
-                    PartnerLogController.log(INVALIDATE_SUCCEEDED)
-                    Result.success(partnerAd)
-                }
+                PartnerLogController.log(INVALIDATE_SUCCEEDED)
+                Result.success(partnerAd)
             }
+        }
+    }
+
+    override fun setConsents(
+        context: Context,
+        consents: Map<ConsentKey, ConsentValue>,
+        modifiedKeys: Set<ConsentKey>
+    ) {
+        consents[ConsentKeys.USP]?.let {
+            val hasGrantedUspConsent = ConsentManagementPlatform.getUspConsentFromUspString(it)
+            PartnerLogController.log(
+                if (hasGrantedUspConsent) {
+                    USP_CONSENT_GRANTED
+                } else {
+                    USP_CONSENT_DENIED
+                },
+            )
+
+            AdSettings.setDataProcessingOptions(
+                if (hasGrantedUspConsent) {
+                    arrayOf()
+                } else {
+                    arrayOf("LDU")
+                },
+                1,
+                1000,
+            )
         }
     }
 
@@ -359,9 +348,10 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
      *
      * @return A [Result] object containing details about the initialization result.
      */
-    private fun getInitResult(result: AudienceNetworkAds.InitResult): Result<Unit> {
+    private fun getInitResult(result: AudienceNetworkAds.InitResult): Result<Map<String, Any>> {
         return if (result.isSuccess) {
-            Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
+            PartnerLogController.log(SETUP_SUCCEEDED)
+            Result.success(emptyMap())
         } else {
             PartnerLogController.log(SETUP_FAILED, "${result.message}.")
             Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.Unknown))
@@ -387,7 +377,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                 AdView(
                     context,
                     request.partnerPlacement,
-                    getMetaBannerAdSize(request.size),
+                    getMetaBannerAdSize(request.bannerSize?.size),
                 )
 
             val metaListener: AdListener =
