@@ -53,6 +53,7 @@ android {
     productFlavors {
         create("local")
         create("remote")
+        create("candidate")
     }
 
     buildTypes {
@@ -86,6 +87,7 @@ dependencies {
     // For external usage, please use the following production dependency.
     // You may choose a different release version.
     "remoteImplementation"("com.chartboost:chartboost-mediation-sdk:5.0.0")
+    "candidateImplementation"("com.chartboost:chartboost-mediation-sdk:5.0.0")
 
     // Partner SDK
     implementation("com.facebook.android:audience-network-sdk:6.17.0")
