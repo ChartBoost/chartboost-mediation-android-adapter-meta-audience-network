@@ -5,15 +5,15 @@ The Chartboost Mediation Meta Audience Network adapter mediates Meta Audience Ne
 ## Minimum Requirements
 
 | Plugin                   | Version |
-| ------------------------ | ------- |
-| Chartboost Mediation SDK | 4.0.0+  |
+| ------------------------ |---------|
+| Chartboost Mediation SDK | 5.0.0+  |
 | Android API              | 21+     |
 
 ## Integration
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:chartboost-mediation-adapter-meta-audience-network:4.6.17.0.0"
+    implementation "com.chartboost:chartboost-mediation-adapter-meta-audience-network:5.6.17.0.0"
 ```
 
 ## Contributions
