@@ -204,11 +204,11 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     partnerAdListener,
                 )
             PartnerAdFormats.REWARDED_INTERSTITIAL -> {
-                    loadRewardedInterstitialAd(
-                        context,
-                        request,
-                        partnerAdListener,
-                    )
+                loadRewardedInterstitialAd(
+                    context,
+                    request,
+                    partnerAdListener,
+                )
             }
             else -> {
                 PartnerLogController.log(LOAD_FAILED)
@@ -257,8 +257,8 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
                     return@suspendCancellableCoroutine
                 }
                 PartnerAdFormats.REWARDED_INTERSTITIAL -> {
-                        resumeOnce(showRewardedInterstitialAd(partnerAd))
-                        return@suspendCancellableCoroutine
+                    resumeOnce(showRewardedInterstitialAd(partnerAd))
+                    return@suspendCancellableCoroutine
                 }
                 else -> {
                     PartnerLogController.log(SHOW_FAILED)
@@ -317,7 +317,7 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
     override fun setConsents(
         context: Context,
         consents: Map<ConsentKey, ConsentValue>,
-        modifiedKeys: Set<ConsentKey>
+        modifiedKeys: Set<ConsentKey>,
     ) {
         consents[ConsentKeys.USP]?.let {
             val hasGrantedUspConsent = ConsentManagementPlatform.getUspConsentFromUspString(it)
