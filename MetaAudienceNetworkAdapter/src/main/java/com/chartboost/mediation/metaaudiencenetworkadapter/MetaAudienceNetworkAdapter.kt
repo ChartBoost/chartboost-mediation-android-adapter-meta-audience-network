@@ -36,13 +36,7 @@ import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerA
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_UNDERAGE
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_DENIED
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USP_CONSENT_GRANTED
-import com.chartboost.core.consent.ConsentKey
-import com.chartboost.core.consent.ConsentKeys
-import com.chartboost.core.consent.ConsentManagementPlatform
-import com.chartboost.core.consent.ConsentValue
-import com.chartboost.mediation.metaaudiencenetworkadapter.MetaAudienceNetworkAdapter.Companion.getChartboostMediationError
-import com.chartboost.mediation.metaaudiencenetworkadapter.MetaAudienceNetworkAdapter.Companion.onInterstitialAdShowFailure
-import com.chartboost.mediation.metaaudiencenetworkadapter.MetaAudienceNetworkAdapter.Companion.onInterstitialAdShowSuccess
+import com.chartboost.core.consent.*
 import com.facebook.ads.*
 import com.facebook.ads.Ad
 import kotlinx.coroutines.CancellableContinuation
@@ -319,8 +313,12 @@ class MetaAudienceNetworkAdapter : PartnerAdapter {
         consents: Map<ConsentKey, ConsentValue>,
         modifiedKeys: Set<ConsentKey>
     ) {
-        consents[ConsentKeys.USP]?.let {
-            val hasGrantedUspConsent = ConsentManagementPlatform.getUspConsentFromUspString(it)
+        val hasGrantedUspConsent =
+            consents[ConsentKeys.CCPA_OPT_IN]?.takeIf { it.isNotBlank() }
+                ?.equals(ConsentValues.GRANTED)
+                ?: consents[ConsentKeys.USP]?.takeIf { it.isNotBlank() }
+                    ?.let { ConsentManagementPlatform.getUspConsentFromUspString(it) }
+        hasGrantedUspConsent?.let {
             PartnerLogController.log(
                 if (hasGrantedUspConsent) {
                     USP_CONSENT_GRANTED
