@@ -3,6 +3,8 @@
 Note the first digit of every adapter version corresponds to the major version of the Chartboost Mediation SDK compatible with that adapter. 
 Adapters are compatible with any Chartboost Mediation SDK version within that major version.
 
+All official releases can be found on this repository's [releases page](https://github.com/ChartBoost/chartboost-mediation-android-adapter-meta-audience-network/releases).
+
 ### 5.6.17.0.0
 - This version of the adapter supports Chartboost Mediation SDK version 5.+.
 
