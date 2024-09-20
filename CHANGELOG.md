@@ -8,6 +8,9 @@ All official releases can be found on this repository's [releases page](https://
 ### 5.6.18.0.0
 - This version of the adapter has been certified with Meta Audience Network SDK 6.18.0.
 
+### 4.6.18.0.0
+- This version of the adapter has been certified with Meta Audience Network SDK 6.18.0.
+- 
 ### 5.6.17.0.0
 - This version of the adapter supports Chartboost Mediation SDK version 5.+.
 
