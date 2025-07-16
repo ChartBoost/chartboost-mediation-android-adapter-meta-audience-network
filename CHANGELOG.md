@@ -11,6 +11,9 @@ All official releases can be found on this repository's [releases page](https://
 
 ## Mediation 5
 
+### 5.6.20.0.0
+- This version of the adapter has been certified with Meta Audience Network SDK 6.20.0.
+
 ### 5.6.18.0.0
 - This version of the adapter has been certified with Meta Audience Network SDK 6.18.0.
  
