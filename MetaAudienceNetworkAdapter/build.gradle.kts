@@ -35,7 +35,9 @@ repositories {
 
 android {
     namespace = "com.chartboost.mediation.metaaudiencenetworkadapter"
-    compileSdk = 34
+    // audience-network-sdk:6.22.0 added androidx.browser:1.9.0 (undocumented in Meta's
+    // release notes), which declares minCompileSdk=36 and thus requires compileSdk >= 36.
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 21
