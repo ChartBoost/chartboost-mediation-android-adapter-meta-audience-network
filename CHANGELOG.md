@@ -11,6 +11,9 @@ All official releases can be found on this repository's [releases page](https://
 
 ## Mediation 5
 
+### 5.6.22.1.0
+- This version of the adapter has been certified with Meta Audience Network SDK 6.22.1.
+
 ### 5.6.22.0.0
 - This version of the adapter has been certified with Meta Audience Network SDK 6.22.0.
 - Min SDK is now 36 due to `androidx.browser:browser:1.9.0` dependency
